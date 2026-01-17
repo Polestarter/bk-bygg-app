@@ -1,0 +1,47 @@
+import { getProjects as dbGetProjects, getCustomers as dbGetCustomers, getChecklists as dbGetChecklists, getChecklistTemplates as dbGetChecklistTemplates } from "./db";
+import { Project, Customer, Checklist } from "./types";
+
+// Re-export types for convenience
+export * from "./types";
+
+// These functions are now async and return promises
+export async function getProjects(): Promise<Project[]> {
+    return await dbGetProjects();
+}
+
+export async function getCustomers(): Promise<Customer[]> {
+    return await dbGetCustomers();
+}
+
+export async function getChecklists(): Promise<Checklist[]> {
+    return await dbGetChecklists();
+}
+
+export async function getChecklist(id: string): Promise<Checklist | undefined> {
+    const checklists = await dbGetChecklists();
+    return checklists.find(c => c.id === id);
+}
+
+export async function getChecklistTemplates() {
+    return await dbGetChecklistTemplates();
+}
+
+export async function getCustomer(id: string): Promise<Customer | undefined> {
+    const customers = await dbGetCustomers();
+    return customers.find(c => c.id === id);
+}
+
+export async function getCustomerProjects(customerId: string): Promise<Project[]> {
+    const projects = await dbGetProjects();
+    return projects.filter(p => p.customerId === customerId);
+}
+
+export async function getStats() {
+    const projects = await dbGetProjects();
+    const active = projects.filter(p => p.status === "Aktiv").length;
+    const completed = projects.filter(p => p.status === "Fullført").length;
+    const totalBudgetExVAT = projects.reduce((acc, p) => acc + p.budgetExVAT, 0);
+    const totalSpentExVAT = projects.reduce((acc, p) => acc + p.spentExVAT, 0);
+
+    return { active, completed, totalBudgetExVAT, totalSpentExVAT };
+}

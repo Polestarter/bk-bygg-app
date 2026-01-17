@@ -1,0 +1,399 @@
+{
+  "customers": [
+    {
+      "id": "1",
+      "name": "Ola Nordmann",
+      "email": "ola@example.com",
+      "phone": "99887766",
+      "address": "Storgata 1, 0155 Oslo"
+    },
+    {
+      "id": "2",
+      "name": "Line Hansen",
+      "email": "line@example.com",
+      "phone": "44556677",
+      "address": "Hytteveien 12, 3580 Geilo"
+    },
+    {
+      "id": "3",
+      "name": "Eiendom AS",
+      "email": "post@eiendom-as.no",
+      "phone": "22334455",
+      "address": "Næringsveien 4, 0555 Oslo"
+    }
+  ],
+  "projects": [
+    {
+      "id": "1",
+      "customerId": "1",
+      "name": "Oppussing Storgata 1",
+      "address": "Storgata 1, 0155 Oslo",
+      "status": "Aktiv",
+      "pricingType": "Timespris",
+      "progress": 45,
+      "budgetExVAT": 400000,
+      "spentExVAT": 168000,
+      "startDate": "2024-01-10",
+      "files": [],
+      "expenses": [],
+      "extras": []
+    },
+    {
+      "id": "2",
+      "customerId": "2",
+      "name": "Nybygg Hytte Geilo",
+      "address": "Hytteveien 12, 3580 Geilo",
+      "status": "Planlagt",
+      "pricingType": "Fastpris",
+      "progress": 0,
+      "budgetExVAT": 2800000,
+      "spentExVAT": 0,
+      "startDate": "2024-05-01",
+      "files": [],
+      "expenses": [],
+      "extras": [],
+      "timeEntries": [
+        {
+          "id": "l6r25rs",
+          "description": "Runka",
+          "hours": 8,
+          "hourlyRate": 650,
+          "date": "2026-01-17"
+        }
+      ]
+    },
+    {
+      "id": "3",
+      "customerId": "3",
+      "name": "Badrenovering",
+      "address": "Eksempelgata 4, 0555 Oslo",
+      "status": "Fullført",
+      "pricingType": "Fastpris",
+      "progress": 100,
+      "budgetExVAT": 120000,
+      "spentExVAT": 116000,
+      "startDate": "2023-11-15",
+      "files": [],
+      "expenses": [],
+      "extras": []
+    }
+  ],
+  "checklists": [
+    {
+      "id": "101",
+      "projectId": "1",
+      "name": "Råbygg kontroll",
+      "status": "Pågår",
+      "items": [
+        {
+          "id": "c1",
+          "text": "Stenderverk sjekket cc60",
+          "status": "Safe",
+          "comment": "Ser bra ut"
+        },
+        {
+          "id": "c2",
+          "text": "Sviller festet med bolt",
+          "status": "Safe"
+        },
+        {
+          "id": "c3",
+          "text": "Vindsperre tettet",
+          "status": null
+        },
+        {
+          "id": "c4",
+          "text": "Utlekting utført",
+          "status": "Unsafe",
+          "comment": "Mangler spikerslag"
+        }
+      ],
+      "dueDate": "2024-02-15"
+    },
+    {
+      "id": "102",
+      "projectId": "1",
+      "name": "HMS Runde uke 41",
+      "status": "Fullført",
+      "items": [
+        {
+          "id": "h1",
+          "text": "Verneutstyr tilgjengelig",
+          "status": "Safe"
+        },
+        {
+          "id": "h2",
+          "text": "Førstehjelpsskrin sjekket",
+          "status": "Safe"
+        },
+        {
+          "id": "h3",
+          "text": "Rømningsveier ryddet",
+          "status": "NA"
+        }
+      ],
+      "dueDate": "2024-01-20"
+    },
+    {
+      "id": "103",
+      "projectId": "2",
+      "name": "Oppstartsmøte Sjekkliste",
+      "status": "Ny",
+      "items": [
+        {
+          "id": "o1",
+          "text": "Kontrakt signert",
+          "status": null
+        },
+        {
+          "id": "o2",
+          "text": "Fremdriftsplan godkjent",
+          "status": null
+        },
+        {
+          "id": "o3",
+          "text": "Nabovarsel sendt",
+          "status": null
+        }
+      ],
+      "dueDate": "2024-05-01"
+    },
+    {
+      "id": "9dfg9wt",
+      "projectId": "1",
+      "name": "Runkerunde",
+      "status": "Ny",
+      "items": [
+        {
+          "id": "qairqgt",
+          "text": "Slukmansjett montert",
+          "status": null
+        },
+        {
+          "id": "2jffv2x",
+          "text": "Smøremembran lag 1",
+          "status": null
+        },
+        {
+          "id": "j9ixkkp",
+          "text": "Smøremembran lag 2",
+          "status": null
+        },
+        {
+          "id": "xtd8y07",
+          "text": "Oppbrett sjekket",
+          "status": null
+        }
+      ],
+      "dueDate": "2026-01-27"
+    }
+  ],
+  "checklistTemplates": [
+    {
+      "id": "t1",
+      "name": "Råbygg Kontroll",
+      "items": [
+        {
+          "text": "Stenderverk sjekket cc60"
+        },
+        {
+          "text": "Sviller festet med bolt"
+        },
+        {
+          "text": "Vindsperre tettet"
+        },
+        {
+          "text": "Utlekting utført"
+        }
+      ]
+    },
+    {
+      "id": "t2",
+      "name": "Våtromsmembran",
+      "items": [
+        {
+          "text": "Slukmansjett montert"
+        },
+        {
+          "text": "Smøremembran lag 1"
+        },
+        {
+          "text": "Smøremembran lag 2"
+        },
+        {
+          "text": "Oppbrett sjekket"
+        }
+      ]
+    },
+    {
+      "id": "t3",
+      "name": "HMS Runde",
+      "items": [
+        {
+          "text": "Verneutstyr tilgjengelig"
+        },
+        {
+          "text": "Førstehjelpsskrin sjekket"
+        },
+        {
+          "text": "Rømningsveier ryddet"
+        },
+        {
+          "text": "Brannslukker kontrollert"
+        }
+      ]
+    }
+  ],
+  "offers": [
+    {
+      "id": "cmywre1",
+      "customerId": "2",
+      "date": "2026-01-17",
+      "status": "Draft",
+      "projectDescription": "Runke 10 kg sæd i en beholder",
+      "customerType": "Bedrift",
+      "projectType": "Rehab",
+      "pricingModel": "Fastpris",
+      "validDays": 30,
+      "paymentPlan": "Etterskudd",
+      "selectedConditionIds": [
+        "A2",
+        "B1",
+        "B2",
+        "C2",
+        "C3",
+        "C4",
+        "F2",
+        "F3"
+      ],
+      "lineItems": [
+        {
+          "id": "ylwqtu7",
+          "type": "material",
+          "description": "Dør",
+          "unit": "stk",
+          "quantity": 1,
+          "unitCost": 14150,
+          "markup": 36,
+          "unitPrice": 19244,
+          "totalPrice": 19244,
+          "showInOffer": true
+        },
+        {
+          "id": "3f3c38w",
+          "type": "material",
+          "description": "Fugemasse",
+          "unit": "stk",
+          "quantity": 12,
+          "unitCost": 117,
+          "markup": 20,
+          "unitPrice": 140,
+          "totalPrice": 1685,
+          "showInOffer": true
+        },
+        {
+          "id": "lxcoeq6",
+          "type": "labor",
+          "description": "Rive gammel dør",
+          "unit": "timer",
+          "quantity": 3,
+          "unitCost": 650,
+          "markup": 0,
+          "unitPrice": 650,
+          "totalPrice": 1950,
+          "showInOffer": true
+        },
+        {
+          "id": "1ztnkc2",
+          "type": "labor",
+          "description": "Rengjøre åpning og klargjøre for ny dør",
+          "unit": "timer",
+          "quantity": 1,
+          "unitCost": 650,
+          "markup": 0,
+          "unitPrice": 650,
+          "totalPrice": 650,
+          "showInOffer": true
+        },
+        {
+          "id": "du98570",
+          "type": "labor",
+          "description": "Montere ny dør",
+          "unit": "timer",
+          "quantity": 4,
+          "unitCost": 650,
+          "markup": 0,
+          "unitPrice": 650,
+          "totalPrice": 2600,
+          "showInOffer": true
+        },
+        {
+          "id": "6wqwz31",
+          "type": "labor",
+          "description": "Fuge og dytte",
+          "unit": "timer",
+          "quantity": 1,
+          "unitCost": 650,
+          "markup": 0,
+          "unitPrice": 650,
+          "totalPrice": 650,
+          "showInOffer": true
+        },
+        {
+          "id": "60tu2qz",
+          "type": "labor",
+          "description": "Rydde",
+          "unit": "timer",
+          "quantity": 2,
+          "unitCost": 650,
+          "markup": 0,
+          "unitPrice": 650,
+          "totalPrice": 1300,
+          "showInOffer": true
+        },
+        {
+          "id": "zf5wnck",
+          "type": "custom",
+          "description": "Kjøre søppeltomta med henger",
+          "unit": "fastpris",
+          "quantity": 1,
+          "unitCost": 1000,
+          "markup": 0,
+          "unitPrice": 1000,
+          "totalPrice": 1000,
+          "showInOffer": true
+        },
+        {
+          "id": "lwm9a6y",
+          "type": "custom",
+          "description": "Søppeltomta",
+          "unit": "fastpris",
+          "quantity": 1,
+          "unitCost": 2000,
+          "markup": 0,
+          "unitPrice": 2000,
+          "totalPrice": 2000,
+          "showInOffer": true
+        }
+      ],
+      "totalPrice": 31079
+    },
+    {
+      "id": "sdykjsu",
+      "customerId": "1",
+      "date": "2026-01-17",
+      "status": "Draft",
+      "projectDescription": "dsfdsfsdf",
+      "customerType": "Privat",
+      "projectType": "Rehab",
+      "pricingModel": "Fastpris",
+      "validDays": 30,
+      "paymentPlan": "50/50",
+      "selectedConditionIds": [
+        "A2"
+      ],
+      "lineItems": [],
+      "totalPrice": 0
+    }
+  ]
+}
