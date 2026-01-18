@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, ClipboardList, Wallet, Settings, Building2, Users, FileText } from "lucide-react";
+import { useAuth } from "@/components/AuthProvider";
+import { LayoutDashboard, ClipboardList, Wallet, Settings, Building2, Users, FileText, LogOut } from "lucide-react";
 
 const navItems = [
     { name: "Oversikt", href: "/", icon: LayoutDashboard },
@@ -16,6 +17,7 @@ const navItems = [
 
 export default function Sidebar() {
     const pathname = usePathname();
+    const { signOut, user } = useAuth();
 
     return (
         <aside style={{
@@ -61,7 +63,27 @@ export default function Sidebar() {
             </nav>
 
             <div style={{ marginTop: "auto", padding: "1rem", borderTop: "1px solid var(--border)" }}>
-                <p style={{ fontSize: "0.875rem", color: "var(--muted-foreground)" }}>Logget inn som<br /><span style={{ color: "var(--foreground)" }}>Jolly</span></p>
+                {user && (
+                    <div style={{ marginBottom: "1rem", fontSize: "0.8rem", color: "var(--muted-foreground)", overflow: "hidden", textOverflow: "ellipsis" }}>
+                        Logget inn som: <br /><span style={{ color: "var(--foreground)" }}>{user.email}</span>
+                    </div>
+                )}
+                <button
+                    onClick={() => signOut()}
+                    className="nav-item"
+                    style={{
+                        width: "100%",
+                        background: "none",
+                        border: "none",
+                        cursor: "pointer",
+                        color: "var(--muted-foreground)",
+                        justifyContent: "flex-start",
+                        padding: "0.5rem"
+                    }}
+                >
+                    <LogOut size={20} />
+                    <span>Logg ut</span>
+                </button>
             </div>
         </aside>
     );

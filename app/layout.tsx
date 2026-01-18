@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
-import Sidebar from "@/components/Sidebar";
-import MobileNav from "@/components/MobileNav";
+import AuthProvider from "@/components/AuthProvider";
+import AuthGuard from "@/components/AuthGuard";
+import AuthenticatedLayout from "@/components/AuthenticatedLayout";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 
@@ -20,15 +21,13 @@ export default function RootLayout({
   return (
     <html lang="no">
       <body className={inter.className}>
-        <div className="desktop-sidebar">
-          <Sidebar />
-        </div>
-
-        <div className="main-content" style={{ width: "100%", minHeight: "100vh" }}>
-          {children}
-        </div>
-
-        <MobileNav />
+        <AuthProvider>
+          <AuthGuard>
+            <AuthenticatedLayout>
+              {children}
+            </AuthenticatedLayout>
+          </AuthGuard>
+        </AuthProvider>
       </body>
     </html>
   );
