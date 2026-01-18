@@ -28,9 +28,12 @@ export default function EconomyDetails({ project, onUpdate }: { project: Project
             category: formData.get("category") as string
         };
 
+        const newTotalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0) + newExpense.amount;
+
         const updatedProject = {
             ...project,
-            expenses: [...expenses, newExpense]
+            expenses: [...expenses, newExpense],
+            spentExVAT: newTotalExpenses
         };
 
         await updateProject(updatedProject);
