@@ -32,9 +32,9 @@ export default function ProjectsPage() {
                     <h1>Prosjekter</h1>
                     <p style={{ color: "var(--muted-foreground)" }}>Administrer dine byggprosjekter</p>
                 </div>
-                <button className="btn btn-primary" style={{ gap: "0.5rem" }}>
+                <Link href="/projects/new" className="btn btn-primary" style={{ gap: "0.5rem", display: "inline-flex", alignItems: "center", textDecoration: "none" }}>
                     <Plus size={18} /> Nytt Prosjekt
-                </button>
+                </Link>
             </div>
 
             <div style={{ marginBottom: "2rem", position: "relative" }}>
