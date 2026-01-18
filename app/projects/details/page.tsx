@@ -77,6 +77,16 @@ function ProjectDetailsContent() {
     const profit = project.budgetExVAT - project.spentExVAT - totalTimeCost;
     const profitMargin = project.budgetExVAT > 0 ? (profit / project.budgetExVAT) * 100 : 0;
 
+    const refreshProject = async () => {
+        if (!id) return;
+        const projects = await getProjects();
+        const foundProject = projects.find(p => p.id === id);
+        if (foundProject) {
+            setProject(foundProject);
+            // Optionally refresh other dependent data if needed, but project is main one for these components
+        }
+    };
+
     return (
         <main className="container" style={{ paddingTop: "2rem", paddingBottom: "6rem" }}>
             <Link href="/projects" style={{ display: "inline-flex", alignItems: "center", gap: "0.5rem", color: "var(--muted-foreground)", marginBottom: "1rem" }}>
@@ -218,9 +228,9 @@ function ProjectDetailsContent() {
                 )}
             </div>
 
-            <TimeTracking project={project} />
+            <TimeTracking project={project} onUpdate={refreshProject} />
             <DocumentList project={project} />
-            <EconomyDetails project={project} />
+            <EconomyDetails project={project} onUpdate={refreshProject} />
         </main>
     );
 }

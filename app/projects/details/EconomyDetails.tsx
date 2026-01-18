@@ -6,7 +6,7 @@ import { updateProject } from "@/lib/db";
 import { Plus, Receipt, TrendingUp, AlertCircle } from "lucide-react";
 import { useRouter } from "next/navigation";
 
-export default function EconomyDetails({ project }: { project: Project }) {
+export default function EconomyDetails({ project, onUpdate }: { project: Project; onUpdate?: () => void }) {
     const router = useRouter();
     const [showAddExpense, setShowAddExpense] = useState(false);
     const [showAddExtra, setShowAddExtra] = useState(false);
@@ -35,6 +35,7 @@ export default function EconomyDetails({ project }: { project: Project }) {
 
         await updateProject(updatedProject);
         setShowAddExpense(false);
+        if (onUpdate) onUpdate();
         router.refresh();
     };
 
@@ -57,6 +58,7 @@ export default function EconomyDetails({ project }: { project: Project }) {
 
         await updateProject(updatedProject);
         setShowAddExtra(false);
+        if (onUpdate) onUpdate();
         router.refresh();
     };
 

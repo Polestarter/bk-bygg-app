@@ -7,7 +7,7 @@ import { Clock, Plus, Timer, Calculator } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/AuthProvider";
 
-export default function TimeTracking({ project }: { project: Project }) {
+export default function TimeTracking({ project, onUpdate }: { project: Project; onUpdate?: () => void }) {
     const router = useRouter();
     const { user } = useAuth();
     const [showLogTime, setShowLogTime] = useState(false);
@@ -63,6 +63,7 @@ export default function TimeTracking({ project }: { project: Project }) {
 
         await updateProject(updatedProject);
         setShowLogTime(false);
+        if (onUpdate) onUpdate();
         router.refresh();
     };
 
