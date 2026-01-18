@@ -180,7 +180,7 @@ export default function TimeTracking({ project, onUpdate }: { project: Project; 
                                 <tbody>
                                     {timeEntries.map(t => (
                                         <tr key={t.id} style={{ borderBottom: "1px solid var(--secondary)" }}>
-                                            <td style={{ padding: "0.5rem 0" }}>{t.date}</td>
+                                            <td style={{ padding: "0.5rem 0" }}>{new Date(t.date).toLocaleDateString("no-NO")}</td>
                                             <td style={{ padding: "0.5rem 0" }}>
                                                 {t.userEmail ? t.userEmail.split('@')[0] : (t.description)}
                                                 {!t.userEmail && <div style={{ fontSize: "0.75rem", color: "var(--muted-foreground)" }}>{t.description}</div>}

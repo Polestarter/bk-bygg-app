@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Project, Expense, Extra } from "@/lib/types";
 import { updateProject } from "@/lib/db";
-import { Plus, Receipt, TrendingUp, AlertCircle } from "lucide-react";
+import { Plus, Receipt, TrendingUp, AlertCircle, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 export default function EconomyDetails({ project, onUpdate }: { project: Project; onUpdate?: () => void }) {
@@ -65,6 +65,38 @@ export default function EconomyDetails({ project, onUpdate }: { project: Project
         router.refresh();
     };
 
+    const handleDeleteExpense = async (expenseId: string) => {
+        if (!confirm("Er du sikker på at du vil slette denne utgiften?")) return;
+
+        const expenseToDelete = expenses.find(e => e.id === expenseId);
+        if (!expenseToDelete) return;
+
+        const newTotalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0) - expenseToDelete.amount;
+
+        const updatedProject = {
+            ...project,
+            expenses: expenses.filter(e => e.id !== expenseId),
+            spentExVAT: newTotalExpenses
+        };
+
+        await updateProject(updatedProject);
+        if (onUpdate) onUpdate();
+        router.refresh();
+    };
+
+    const handleDeleteExtra = async (extraId: string) => {
+        if (!confirm("Er du sikker på at du vil slette dette tillegget?")) return;
+
+        const updatedProject = {
+            ...project,
+            extras: extras.filter(e => e.id !== extraId)
+        };
+
+        await updateProject(updatedProject);
+        if (onUpdate) onUpdate();
+        router.refresh();
+    };
+
     return (
         <div style={{ marginTop: "3rem" }}>
             <h2 style={{ marginBottom: "1.5rem" }}>Økonomi & Tillegg</h2>
@@ -112,14 +144,20 @@ export default function EconomyDetails({ project, onUpdate }: { project: Project
                                         <th style={{ padding: "0.5rem 0" }}>Dato</th>
                                         <th style={{ padding: "0.5rem 0" }}>Beskrivelse</th>
                                         <th style={{ padding: "0.5rem 0", textAlign: "right" }}>Beløp</th>
+                                        <th style={{ padding: "0.5rem 0", width: "40px" }}></th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {expenses.map(e => (
                                         <tr key={e.id} style={{ borderBottom: "1px solid var(--secondary)" }}>
-                                            <td style={{ padding: "0.5rem 0" }}>{e.date}</td>
+                                            <td style={{ padding: "0.5rem 0" }}>{new Date(e.date).toLocaleDateString("no-NO")}</td>
                                             <td style={{ padding: "0.5rem 0" }}>{e.description}</td>
                                             <td style={{ padding: "0.5rem 0", textAlign: "right" }}>{e.amount.toLocaleString()} kr</td>
+                                            <td style={{ padding: "0.5rem 0", textAlign: "right" }}>
+                                                <button onClick={() => handleDeleteExpense(e.id)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--destructive)", padding: "0.25rem" }}>
+                                                    <Trash2 size={16} />
+                                                </button>
+                                            </td>
                                         </tr>
                                     ))}
                                 </tbody>
@@ -168,14 +206,20 @@ export default function EconomyDetails({ project, onUpdate }: { project: Project
                                         <th style={{ padding: "0.5rem 0" }}>Dato</th>
                                         <th style={{ padding: "0.5rem 0" }}>Beskrivelse</th>
                                         <th style={{ padding: "0.5rem 0", textAlign: "right" }}>Pris</th>
+                                        <th style={{ padding: "0.5rem 0", width: "40px" }}></th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {extras.map(e => (
                                         <tr key={e.id} style={{ borderBottom: "1px solid var(--secondary)" }}>
-                                            <td style={{ padding: "0.5rem 0" }}>{e.date}</td>
+                                            <td style={{ padding: "0.5rem 0" }}>{new Date(e.date).toLocaleDateString("no-NO")}</td>
                                             <td style={{ padding: "0.5rem 0" }}>{e.description}</td>
                                             <td style={{ padding: "0.5rem 0", textAlign: "right", color: "var(--destructive)" }}>+ {e.amount.toLocaleString()} kr</td>
+                                            <td style={{ padding: "0.5rem 0", textAlign: "right" }}>
+                                                <button onClick={() => handleDeleteExtra(e.id)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--destructive)", padding: "0.25rem" }}>
+                                                    <Trash2 size={16} />
+                                                </button>
+                                            </td>
                                         </tr>
                                     ))}
                                 </tbody>
