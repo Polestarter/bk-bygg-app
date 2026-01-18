@@ -40,6 +40,11 @@ export interface TimeEntry {
     description: string;
     hours: number;
     hourlyRate: number;
+    startTime?: string; // HH:mm
+    endTime?: string;   // HH:mm
+    breakMinutes?: number;
+    userId?: string;
+    userEmail?: string;
 }
 
 export interface Project {

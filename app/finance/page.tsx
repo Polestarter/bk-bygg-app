@@ -1,5 +1,7 @@
-import { getProjects, getStats } from "@/lib/data";
+import { getProjects } from "@/lib/db";
+import { getStats } from "@/lib/data"; // Keep getStats from data if standard, or move to db
 import { Banknote, TrendingUp, AlertCircle } from "lucide-react";
+import TimeReports from "./TimeReports";
 
 export default async function FinancePage() {
     const projects = await getProjects();
@@ -49,7 +51,9 @@ export default async function FinancePage() {
                 </div>
             </div>
 
-            <h2>Prosjektfordeling</h2>
+            <TimeReports projects={projects} />
+
+            <h2 style={{ marginTop: "3rem" }}>Prosjektfordeling</h2>
             <div style={{ display: "grid", gap: "1rem", marginTop: "1rem" }}>
                 {projects.map(project => {
                     const percentage = Math.min(100, (project.spentExVAT / project.budgetExVAT) * 100);
