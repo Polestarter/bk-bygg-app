@@ -1,8 +1,8 @@
 "use client";
 
 import ProjectForm from "../new/ProjectForm";
-import { getProjects, getCustomers } from "@/lib/db";
-import { Project, Customer } from "@/lib/types";
+import { getProjects } from "@/lib/db";
+import { Project } from "@/lib/types";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useEffect, useState, Suspense } from "react";
 import Link from "next/link";
@@ -12,18 +12,14 @@ function EditProjectContent() {
     const router = useRouter();
     const id = searchParams.get("id");
     const [project, setProject] = useState<Project | undefined>(undefined);
-    const [customers, setCustomers] = useState<Customer[]>([]);
+
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         if (id) {
-            Promise.all([
-                getProjects(),
-                getCustomers()
-            ]).then(([projects, customers]) => {
+            getProjects().then(projects => {
                 const foundProject = projects.find(p => p.id === id);
                 setProject(foundProject);
-                setCustomers(customers);
                 setLoading(false);
             });
         } else {
@@ -49,7 +45,7 @@ function EditProjectContent() {
         );
     }
 
-    return <ProjectForm customers={customers} initialData={project} />;
+    return <ProjectForm initialData={project} />;
 }
 
 export default function EditProjectPage() {

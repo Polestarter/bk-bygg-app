@@ -4,7 +4,7 @@
 import { getCustomer, getCustomerProjects, deleteCustomer } from "@/lib/db";
 import { Project, Customer } from "@/lib/types";
 import Link from "next/link";
-import { ArrowLeft, Phone, Mail, MapPin, Building2, Banknote, Edit, Trash2 } from "lucide-react";
+import { ArrowLeft, Phone, Mail, MapPin, Building2, Banknote, Edit, Trash2, Plus } from "lucide-react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useEffect, useState, Suspense } from "react";
 
@@ -132,7 +132,12 @@ function CustomerDetailsContent() {
                 </div>
             </div>
 
-            <h2>Prosjekter for {customer.name}</h2>
+            <div className="flex-between" style={{ alignItems: "center", marginBottom: "1rem" }}>
+                <h2>Prosjekter for {customer.name}</h2>
+                <Link href={`/projects/new?customerId=${customer.id}`} className="btn btn-outline" style={{ display: "flex", gap: "0.5rem", alignItems: "center", fontSize: "0.875rem" }}>
+                    <Plus size={16} /> Nytt Prosjekt
+                </Link>
+            </div>
             <div style={{ display: "grid", gap: "1rem", marginTop: "1rem" }}>
                 {projects.map(project => (
                     <Link key={project.id} href={`/projects/details?id=${project.id}`} style={{ textDecoration: "none" }}>

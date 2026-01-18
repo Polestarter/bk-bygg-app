@@ -1,14 +1,33 @@
+"use client";
+
 import { getProjects } from "@/lib/db";
-import { getStats } from "@/lib/data"; // Keep getStats from data if standard, or move to db
-import { Banknote, TrendingUp, AlertCircle } from "lucide-react";
+import { Project } from "@/lib/types";
+import { useEffect, useState } from "react";
 import TimeReports from "./TimeReports";
 
-export default async function FinancePage() {
-    const projects = await getProjects();
-    const stats = await getStats();
+export default function FinancePage() {
+    const [projects, setProjects] = useState<Project[]>([]);
+    const [loading, setLoading] = useState(true);
 
-    const totalMargin = stats.totalBudgetExVAT - stats.totalSpentExVAT;
-    const marginPercentage = (totalMargin / stats.totalBudgetExVAT) * 100;
+    useEffect(() => {
+        getProjects().then(data => {
+            setProjects(data);
+            setLoading(false);
+        });
+    }, []);
+
+    const totalBudgetExVAT = projects.reduce((acc, p) => acc + p.budgetExVAT, 0);
+    const totalSpentExVAT = projects.reduce((acc, p) => acc + p.spentExVAT, 0);
+    const totalMargin = totalBudgetExVAT - totalSpentExVAT;
+    const marginPercentage = totalBudgetExVAT > 0 ? (totalMargin / totalBudgetExVAT) * 100 : 0;
+
+    if (loading) {
+        return (
+            <main className="container" style={{ paddingTop: "2rem" }}>
+                <p>Laster økonomioversikt...</p>
+            </main>
+        );
+    }
 
     return (
         <main className="container" style={{ paddingTop: "2rem", paddingBottom: "4rem" }}>
@@ -23,13 +42,13 @@ export default async function FinancePage() {
                 <div className="card">
                     <h3 style={{ fontSize: "0.875rem", fontWeight: "500", color: "var(--muted-foreground)" }}>Total Omsetning (Budsjett)</h3>
                     <p style={{ fontSize: "2.5rem", fontWeight: "bold", marginTop: "0.5rem" }}>
-                        {(stats.totalBudgetExVAT / 1000).toLocaleString()}k <span style={{ fontSize: "1rem", color: "var(--muted-foreground)" }}>NOK</span>
+                        {(totalBudgetExVAT / 1000).toLocaleString()}k <span style={{ fontSize: "1rem", color: "var(--muted-foreground)" }}>NOK</span>
                     </p>
                 </div>
                 <div className="card">
                     <h3 style={{ fontSize: "0.875rem", fontWeight: "500", color: "var(--muted-foreground)" }}>Totale Kostnader</h3>
                     <p style={{ fontSize: "2.5rem", fontWeight: "bold", marginTop: "0.5rem" }}>
-                        {(stats.totalSpentExVAT / 1000).toLocaleString()}k <span style={{ fontSize: "1rem", color: "var(--muted-foreground)" }}>NOK</span>
+                        {(totalSpentExVAT / 1000).toLocaleString()}k <span style={{ fontSize: "1rem", color: "var(--muted-foreground)" }}>NOK</span>
                     </p>
                 </div>
                 <div className="card" style={{ borderColor: marginPercentage < 0 ? "var(--destructive)" : "var(--border)" }}>
@@ -69,7 +88,7 @@ export default async function FinancePage() {
                                 <div style={{ textAlign: "right" }}>
                                     <p style={{ fontWeight: "bold" }}>{(project.spentExVAT / 1000).toLocaleString()}k / {(project.budgetExVAT / 1000).toLocaleString()}k</p>
                                     <p style={{ fontSize: "0.875rem", color: isOverBudget ? "var(--destructive)" : "var(--muted-foreground)" }}>
-                                        {isOverBudget ? "Over budsjett!" : `${(project.budgetExVAT - project.spentExVAT) / 1000}k gjenstår`}
+                                        {isOverBudget ? "Over budsjett!" : `${((project.budgetExVAT - project.spentExVAT) / 1000).toLocaleString()}k gjenstår`}
                                     </p>
                                 </div>
                             </div>

@@ -1,23 +1,39 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Customer, Project, PricingType } from "@/lib/types";
 import { addProject, updateProject } from "@/lib/db";
 import Link from "next/link";
 import { ArrowLeft, Save } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 
 interface ProjectFormProps {
-    customers: Customer[];
+    customers?: Customer[]; // Optional now, or we can ignore it if we fetch internally
     initialData?: Project;
 }
 
-export default function ProjectForm({ customers, initialData }: ProjectFormProps) {
+import { getCustomers } from "@/lib/db";
+
+export default function ProjectForm({ initialData }: ProjectFormProps) {
     const router = useRouter();
+    const searchParams = useSearchParams();
+    const preSelectedCustomerId = searchParams.get("customerId");
+
     const isEditing = !!initialData;
     const [pricingType, setPricingType] = useState(initialData?.pricingType || "Fastpris");
     const [budget, setBudget] = useState(initialData?.budgetExVAT?.toString() || "");
     const [loading, setLoading] = useState(false);
+
+    // Client-side fetching for customers
+    const [customers, setCustomers] = useState<Customer[]>([]);
+    const [loadingCustomers, setLoadingCustomers] = useState(true);
+
+    useEffect(() => {
+        getCustomers().then(c => {
+            setCustomers(c);
+            setLoadingCustomers(false);
+        });
+    }, []);
 
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
@@ -78,7 +94,7 @@ export default function ProjectForm({ customers, initialData }: ProjectFormProps
                         name="customerId"
                         required
                         className="input"
-                        defaultValue={initialData?.customerId || ""}
+                        defaultValue={initialData?.customerId || preSelectedCustomerId || ""}
                         style={{ width: "100%", padding: "0.75rem", borderRadius: "var(--radius)", border: "1px solid var(--border)", backgroundColor: "var(--input)", color: "var(--foreground)" }}
                     >
                         <option value="" disabled>Velg kunde...</option>
