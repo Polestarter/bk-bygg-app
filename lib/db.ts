@@ -1,108 +1,74 @@
-import fs from "fs/promises";
-import path from "path";
+
+import { supabase } from "./supabaseClient";
 import { Project, Customer, Checklist, ChecklistTemplate, Offer } from "./types";
 
-const DB_PATH = path.join(process.cwd(), "db.json");
-
-interface Database {
-    projects: Project[];
-    customers: Customer[];
-    checklists: Checklist[];
-    checklistTemplates: ChecklistTemplate[];
-    offers: Offer[];
-}
-
-async function readDb(): Promise<Database> {
-    try {
-        const data = await fs.readFile(DB_PATH, "utf-8");
-        return JSON.parse(data);
-    } catch (error) {
-        return { projects: [], customers: [], checklists: [], checklistTemplates: [], offers: [] };
-    }
-}
-
-async function writeDb(data: Database): Promise<void> {
-    await fs.writeFile(DB_PATH, JSON.stringify(data, null, 2), "utf-8");
-}
+// Helper to strip "undefined" fields because Supabase/JSON doesn't like them?
+// Actually Supabase JS handles it, but undefined is not valid JSON.
+// JSON.stringify removes undefined.
+const clean = <T>(obj: T): T => JSON.parse(JSON.stringify(obj));
 
 export async function getOffers(): Promise<Offer[]> {
-    const db = await readDb();
-    return db.offers || [];
+    const { data } = await supabase.from('offers').select('*');
+    return (data as Offer[]) || [];
 }
 
 export async function addOffer(offer: Offer): Promise<void> {
-    const db = await readDb();
-    if (!db.offers) db.offers = [];
-    db.offers.push(offer);
-    await writeDb(db);
+    const { error } = await supabase.from('offers').insert(clean(offer));
+    if (error) console.error("Error adding offer:", error);
 }
 
 export async function updateOfferInDb(offer: Offer): Promise<void> {
-    const db = await readDb();
-    if (!db.offers) return;
-    const index = db.offers.findIndex(o => o.id === offer.id);
-    if (index !== -1) {
-        db.offers[index] = offer;
-        await writeDb(db);
-    }
+    const { error } = await supabase.from('offers').update(clean(offer)).eq('id', offer.id);
+    if (error) console.error("Error updating offer:", error);
 }
 
 export async function getProjects(): Promise<Project[]> {
-    const db = await readDb();
-    return db.projects;
+    const { data } = await supabase.from('projects').select('*');
+    return (data as Project[]) || [];
 }
 
 export async function getCustomers(): Promise<Customer[]> {
-    const db = await readDb();
-    return db.customers;
+    const { data } = await supabase.from('customers').select('*');
+    return (data as Customer[]) || [];
 }
 
 export async function getChecklists(): Promise<Checklist[]> {
-    const db = await readDb();
-    return db.checklists;
+    const { data } = await supabase.from('checklists').select('*');
+    return (data as Checklist[]) || [];
 }
 
 export async function getChecklist(id: string): Promise<Checklist | undefined> {
-    const db = await readDb();
-    return db.checklists.find(c => c.id === id);
+    const { data } = await supabase.from('checklists').select('*').eq('id', id).single();
+    if (!data) return undefined;
+    return data as Checklist;
 }
 
 export async function addProject(project: Project): Promise<void> {
-    const db = await readDb();
-    db.projects.push(project);
-    await writeDb(db);
+    const { error } = await supabase.from('projects').insert(clean(project));
+    if (error) console.error("Error adding project:", error);
 }
 
 export async function addCustomer(customer: Customer): Promise<void> {
-    const db = await readDb();
-    db.customers.push(customer);
-    await writeDb(db);
+    const { error } = await supabase.from('customers').insert(clean(customer));
+    if (error) console.error("Error adding customer:", error);
 }
 
 export async function getChecklistTemplates(): Promise<ChecklistTemplate[]> {
-    const db = await readDb();
-    return db.checklistTemplates || [];
+    const { data } = await supabase.from('checklistTemplates').select('*');
+    return (data as ChecklistTemplate[]) || [];
 }
 
 export async function addChecklistTemplate(template: ChecklistTemplate): Promise<void> {
-    const db = await readDb();
-    if (!db.checklistTemplates) db.checklistTemplates = [];
-    db.checklistTemplates.push(template);
-    await writeDb(db);
+    const { error } = await supabase.from('checklistTemplates').insert(clean(template));
+    if (error) console.error("Error adding template:", error);
 }
 
 export async function addChecklist(checklist: Checklist): Promise<void> {
-    const db = await readDb();
-    if (!db.checklists) db.checklists = [];
-    db.checklists.push(checklist);
-    await writeDb(db);
+    const { error } = await supabase.from('checklists').insert(clean(checklist));
+    if (error) console.error("Error adding checklist:", error);
 }
 
 export async function updateProject(updatedProject: Project): Promise<void> {
-    const db = await readDb();
-    const index = db.projects.findIndex(p => p.id === updatedProject.id);
-    if (index !== -1) {
-        db.projects[index] = updatedProject;
-        await writeDb(db);
-    }
+    const { error } = await supabase.from('projects').update(clean(updatedProject)).eq('id', updatedProject.id);
+    if (error) console.error("Error updating project:", error);
 }

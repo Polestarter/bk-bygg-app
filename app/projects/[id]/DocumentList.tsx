@@ -17,7 +17,9 @@ export default function DocumentList({ project }: { project: Project }) {
         <div style={{ marginTop: "3rem" }}>
             <div className="flex-between" style={{ marginBottom: "1rem" }}>
                 <h2>Dokumenter & FDV</h2>
+
                 <div style={{ display: "flex", gap: "1rem" }}>
+                    {/*
                     <Link
                         href={`/api/projects/${project.id}/export`}
                         className="btn btn-secondary"
@@ -26,14 +28,25 @@ export default function DocumentList({ project }: { project: Project }) {
                     >
                         <Download size={16} /> Last ned alt (Zip)
                     </Link>
+                    */}
                     <button
-                        onClick={() => setIsUploading(!isUploading)}
+                        title="Filopplasting midlertidig deaktivert (krever Supabase Storage)"
+                        disabled
+                        className="btn btn-secondary"
+                        style={{ gap: "0.5rem", opacity: 0.5, cursor: "not-allowed" }}
+                    >
+                        <Download size={16} /> Last ned alt (Zip)
+                    </button>
+
+                    <button
+                        onClick={() => alert("Filopplasting må konfigureres med Supabase Storage for skylagring.")}
                         className="btn btn-primary"
-                        style={{ gap: "0.5rem" }}
+                        style={{ gap: "0.5rem", opacity: 0.5 }}
                     >
                         <Upload size={16} /> Last opp fil
                     </button>
                 </div>
+
             </div>
 
             {isUploading && (
