@@ -1,31 +1,52 @@
 "use client";
 
-import { addCustomer } from "@/lib/db";
+import { addCustomer, updateCustomer } from "@/lib/db";
 import { Customer } from "@/lib/types";
 import Link from "next/link";
 import { ArrowLeft, Save } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useState } from "react";
 
-export default function CustomerForm() {
+interface CustomerFormProps {
+    initialData?: Customer;
+}
+
+export default function CustomerForm({ initialData }: CustomerFormProps) {
     const router = useRouter();
+    const isEditing = !!initialData;
+    const [loading, setLoading] = useState(false);
 
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
+        setLoading(true);
         const formData = new FormData(e.currentTarget);
 
-        const newCustomer: Customer = {
-            id: Math.random().toString(36).substring(2, 9),
+        const customerData: Customer = {
+            id: initialData?.id || Math.random().toString(36).substring(2, 9),
             name: formData.get("name") as string,
             email: formData.get("email") as string,
             phone: formData.get("phone") as string,
             address: formData.get("address") as string,
         };
 
-        if (!newCustomer.name) return;
+        if (!customerData.name) {
+            setLoading(false);
+            return;
+        }
 
-        await addCustomer(newCustomer);
-        router.push("/customers");
-        router.refresh();
+        try {
+            if (isEditing) {
+                await updateCustomer(customerData);
+            } else {
+                await addCustomer(customerData);
+            }
+            router.push("/customers");
+            router.refresh();
+        } catch (error) {
+            console.error("Failed to save customer", error);
+            alert("Kunne ikke lagre kunde.");
+            setLoading(false);
+        }
     };
 
     return (
@@ -35,7 +56,7 @@ export default function CustomerForm() {
             </Link>
 
             <div className="flex-between" style={{ marginBottom: "2rem" }}>
-                <h1>Ny Kunde</h1>
+                <h1>{isEditing ? "Rediger Kunde" : "Ny Kunde"}</h1>
             </div>
 
             <form onSubmit={handleSubmit} className="card" style={{ display: "grid", gap: "1.5rem" }}>
@@ -43,6 +64,7 @@ export default function CustomerForm() {
                     <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: "500" }}>Navn</label>
                     <input
                         name="name"
+                        defaultValue={initialData?.name}
                         type="text"
                         required
                         className="input"
@@ -55,6 +77,7 @@ export default function CustomerForm() {
                     <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: "500" }}>E-post</label>
                     <input
                         name="email"
+                        defaultValue={initialData?.email}
                         type="email"
                         required
                         className="input"
@@ -67,6 +90,7 @@ export default function CustomerForm() {
                     <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: "500" }}>Telefon</label>
                     <input
                         name="phone"
+                        defaultValue={initialData?.phone}
                         type="tel"
                         required
                         className="input"
@@ -79,6 +103,7 @@ export default function CustomerForm() {
                     <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: "500" }}>Adresse</label>
                     <input
                         name="address"
+                        defaultValue={initialData?.address}
                         type="text"
                         required
                         className="input"
@@ -88,8 +113,8 @@ export default function CustomerForm() {
                 </div>
 
                 <div style={{ paddingTop: "1rem", borderTop: "1px solid var(--border)", display: "flex", justifyContent: "flex-end" }}>
-                    <button type="submit" className="btn btn-primary" style={{ gap: "0.5rem" }}>
-                        <Save size={18} /> Lagre Kunde
+                    <button type="submit" disabled={loading} className="btn btn-primary" style={{ gap: "0.5rem" }}>
+                        <Save size={18} /> {loading ? "Lagrer..." : (isEditing ? "Oppdater Kunde" : "Lagre Kunde")}
                     </button>
                 </div>
             </form>

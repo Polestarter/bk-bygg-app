@@ -1,17 +1,20 @@
 "use client";
 
-import { getProjects, Project, getCustomer, getChecklistTemplates, getChecklists, Customer, ChecklistTemplate, Checklist } from "@/lib/data";
+
+import { getProjects, getCustomer, getChecklistTemplates, getChecklists, deleteProject } from "@/lib/db";
+import { Project, Customer, ChecklistTemplate, Checklist } from "@/lib/types";
 import Link from "next/link";
-import { ArrowLeft, CheckSquare, Clock, Banknote, Calendar, Building2, MapPin } from "lucide-react";
+import { ArrowLeft, CheckSquare, Clock, Banknote, Calendar, Building2, MapPin, Edit, Trash2 } from "lucide-react";
 import DocumentList from "./DocumentList";
 import EconomyDetails from "./EconomyDetails";
 import TimeTracking from "./TimeTracking";
 import NewChecklistButton from "./NewChecklistButton";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import { useEffect, useState, Suspense } from "react";
 
 function ProjectDetailsContent() {
     const searchParams = useSearchParams();
+    const router = useRouter();
     const id = searchParams.get("id");
 
     const [project, setProject] = useState<Project | undefined>(undefined);
@@ -43,6 +46,15 @@ function ProjectDetailsContent() {
             setLoading(false);
         }
     }, [id]);
+
+    const handleDelete = async () => {
+        if (!project) return;
+        if (confirm("Er du sikker på at du vil slette dette prosjektet? Dette kan ikke angres.")) {
+            await deleteProject(project.id);
+            router.push("/projects");
+            router.refresh();
+        }
+    };
 
     if (loading) {
         return (
@@ -89,6 +101,14 @@ function ProjectDetailsContent() {
                     </div>
                 </div>
                 <div style={{ textAlign: "right" }}>
+                    <div style={{ display: "flex", gap: "0.5rem", justifyContent: "flex-end", marginBottom: "0.5rem" }}>
+                        <Link href={`/projects/edit?id=${project.id}`} className="btn btn-secondary" style={{ gap: "0.5rem" }}>
+                            <Edit size={16} /> Rediger
+                        </Link>
+                        <button onClick={handleDelete} className="btn btn-destructive" style={{ gap: "0.5rem" }}>
+                            <Trash2 size={16} /> Slett
+                        </button>
+                    </div>
                     <span style={{
                         padding: "0.5rem 1rem",
                         borderRadius: "99px",

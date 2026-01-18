@@ -1,6 +1,7 @@
 "use client";
 
-import { getProjects, Project } from "@/lib/data";
+import { getProjects } from "@/lib/db";
+import { Project } from "@/lib/types";
 import Link from "next/link";
 import { Plus, Search } from "lucide-react";
 import { useEffect, useState } from "react";

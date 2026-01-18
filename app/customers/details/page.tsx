@@ -1,13 +1,16 @@
 "use client";
 
-import { getCustomer, getCustomerProjects, Project, Customer } from "@/lib/data";
+
+import { getCustomer, getCustomerProjects, deleteCustomer } from "@/lib/db";
+import { Project, Customer } from "@/lib/types";
 import Link from "next/link";
-import { ArrowLeft, Phone, Mail, MapPin, Building2, Banknote } from "lucide-react";
-import { useSearchParams } from "next/navigation";
+import { ArrowLeft, Phone, Mail, MapPin, Building2, Banknote, Edit, Trash2 } from "lucide-react";
+import { useSearchParams, useRouter } from "next/navigation";
 import { useEffect, useState, Suspense } from "react";
 
 function CustomerDetailsContent() {
     const searchParams = useSearchParams();
+    const router = useRouter();
     const id = searchParams.get("id");
 
     const [customer, setCustomer] = useState<Customer | undefined>(undefined);
@@ -28,6 +31,15 @@ function CustomerDetailsContent() {
             setLoading(false);
         }
     }, [id]);
+
+    const handleDelete = async () => {
+        if (!customer) return;
+        if (confirm("Er du sikker på at du vil slette denne kunden? Dette kan ikke angres.")) {
+            await deleteCustomer(customer.id);
+            router.push("/customers");
+            router.refresh();
+        }
+    };
 
     if (loading) {
         return (
@@ -71,6 +83,14 @@ function CustomerDetailsContent() {
                             <MapPin size={16} /> {customer.address}
                         </span>
                     </div>
+                </div>
+                <div style={{ display: "flex", gap: "0.5rem" }}>
+                    <Link href={`/customers/edit?id=${customer.id}`} className="btn btn-secondary" style={{ gap: "0.5rem" }}>
+                        <Edit size={16} /> Rediger
+                    </Link>
+                    <button onClick={handleDelete} className="btn btn-destructive" style={{ gap: "0.5rem" }}>
+                        <Trash2 size={16} /> Slett
+                    </button>
                 </div>
             </div>
 

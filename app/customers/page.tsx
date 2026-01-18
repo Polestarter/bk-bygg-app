@@ -1,6 +1,7 @@
 "use client";
 
-import { getCustomers, getProjects, Customer, Project } from "@/lib/data";
+import { getCustomers, getProjects } from "@/lib/db";
+import { Customer, Project } from "@/lib/types";
 import Link from "next/link";
 import { Users, Building2, Phone, Plus } from "lucide-react";
 import { useEffect, useState } from "react";

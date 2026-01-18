@@ -72,3 +72,29 @@ export async function updateProject(updatedProject: Project): Promise<void> {
     const { error } = await supabase.from('projects').update(clean(updatedProject)).eq('id', updatedProject.id);
     if (error) console.error("Error updating project:", error);
 }
+
+export async function updateCustomer(customer: Customer): Promise<void> {
+    const { error } = await supabase.from('customers').update(clean(customer)).eq('id', customer.id);
+    if (error) console.error("Error updating customer:", error);
+}
+
+export async function deleteCustomer(id: string): Promise<void> {
+    const { error } = await supabase.from('customers').delete().eq('id', id);
+    if (error) console.error("Error deleting customer:", error);
+}
+
+export async function deleteProject(id: string): Promise<void> {
+    const { error } = await supabase.from('projects').delete().eq('id', id);
+    if (error) console.error("Error deleting project:", error);
+}
+
+export async function getCustomer(id: string): Promise<Customer | undefined> {
+    const { data } = await supabase.from('customers').select('*').eq('id', id).single();
+    if (!data) return undefined;
+    return data as Customer;
+}
+
+export async function getCustomerProjects(customerId: string): Promise<Project[]> {
+    const { data } = await supabase.from('projects').select('*').eq('customerId', customerId);
+    return (data as Project[]) || [];
+}
