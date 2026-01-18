@@ -2,10 +2,12 @@
 
 import { useState } from "react";
 import { Project, Expense, Extra } from "@/lib/types";
-import { addExpense, addExtra } from "@/lib/actions";
+import { updateProject } from "@/lib/db";
 import { Plus, Receipt, TrendingUp, AlertCircle } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 export default function EconomyDetails({ project }: { project: Project }) {
+    const router = useRouter();
     const [showAddExpense, setShowAddExpense] = useState(false);
     const [showAddExtra, setShowAddExtra] = useState(false);
 
@@ -13,6 +15,50 @@ export default function EconomyDetails({ project }: { project: Project }) {
     const extras = project.extras || [];
 
     const totalExtras = extras.reduce((sum, e) => sum + e.amount, 0);
+
+    const handleAddExpense = async (e: React.FormEvent<HTMLFormElement>) => {
+        e.preventDefault();
+        const formData = new FormData(e.currentTarget);
+
+        const newExpense: Expense = {
+            id: Math.random().toString(36).substring(2, 9),
+            description: formData.get("description") as string,
+            amount: Number(formData.get("amount")),
+            date: formData.get("date") as string,
+            category: formData.get("category") as string
+        };
+
+        const updatedProject = {
+            ...project,
+            expenses: [...expenses, newExpense]
+        };
+
+        await updateProject(updatedProject);
+        setShowAddExpense(false);
+        router.refresh();
+    };
+
+    const handleAddExtra = async (e: React.FormEvent<HTMLFormElement>) => {
+        e.preventDefault();
+        const formData = new FormData(e.currentTarget);
+
+        const newExtra: Extra = {
+            id: Math.random().toString(36).substring(2, 9),
+            description: formData.get("description") as string,
+            amount: Number(formData.get("amount")),
+            date: formData.get("date") as string,
+            status: "Pending"
+        };
+
+        const updatedProject = {
+            ...project,
+            extras: [...extras, newExtra]
+        };
+
+        await updateProject(updatedProject);
+        setShowAddExtra(false);
+        router.refresh();
+    };
 
     return (
         <div style={{ marginTop: "3rem" }}>
@@ -33,10 +79,7 @@ export default function EconomyDetails({ project }: { project: Project }) {
                     </div>
 
                     {showAddExpense && (
-                        <form action={async (formData) => {
-                            await addExpense(formData);
-                            setShowAddExpense(false);
-                        }} style={{ backgroundColor: "var(--background)", padding: "1rem", borderRadius: "var(--radius)", marginBottom: "1rem", border: "1px solid var(--border)" }}>
+                        <form onSubmit={handleAddExpense} style={{ backgroundColor: "var(--background)", padding: "1rem", borderRadius: "var(--radius)", marginBottom: "1rem", border: "1px solid var(--border)" }}>
                             <input type="hidden" name="projectId" value={project.id} />
                             <div style={{ display: "grid", gap: "0.5rem" }}>
                                 <input name="description" placeholder="Beskrivelse" required className="input" style={{ width: "100%", padding: "0.5rem" }} />
@@ -97,10 +140,7 @@ export default function EconomyDetails({ project }: { project: Project }) {
                     </div>
 
                     {showAddExtra && (
-                        <form action={async (formData) => {
-                            await addExtra(formData);
-                            setShowAddExtra(false);
-                        }} style={{ backgroundColor: "var(--background)", padding: "1rem", borderRadius: "var(--radius)", marginBottom: "1rem", border: "1px solid var(--border)" }}>
+                        <form onSubmit={handleAddExtra} style={{ backgroundColor: "var(--background)", padding: "1rem", borderRadius: "var(--radius)", marginBottom: "1rem", border: "1px solid var(--border)" }}>
                             <input type="hidden" name="projectId" value={project.id} />
                             <div style={{ display: "grid", gap: "0.5rem" }}>
                                 <input name="description" placeholder="Beskrivelse av tillegg" required className="input" style={{ width: "100%", padding: "0.5rem" }} />

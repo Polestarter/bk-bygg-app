@@ -1,10 +1,33 @@
-import { getCustomers, getProjects } from "@/lib/data";
+"use client";
+
+import { getCustomers, getProjects, Customer, Project } from "@/lib/data";
 import Link from "next/link";
 import { Users, Building2, Phone, Plus } from "lucide-react";
+import { useEffect, useState } from "react";
 
-export default async function CustomersPage() {
-    const customers = await getCustomers();
-    const allProjects = await getProjects();
+export default function CustomersPage() {
+    const [customers, setCustomers] = useState<Customer[]>([]);
+    const [allProjects, setAllProjects] = useState<Project[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        Promise.all([
+            getCustomers(),
+            getProjects()
+        ]).then(([custs, projs]) => {
+            setCustomers(custs);
+            setAllProjects(projs);
+            setLoading(false);
+        });
+    }, []);
+
+    if (loading) {
+        return (
+            <main className="container" style={{ paddingTop: "2rem" }}>
+                <p>Laster kunder...</p>
+            </main>
+        );
+    }
 
     return (
         <main className="container" style={{ paddingTop: "2rem", paddingBottom: "4rem" }}>
@@ -22,7 +45,7 @@ export default async function CustomersPage() {
                 {customers.map(customer => {
                     const projects = allProjects.filter(p => p.customerId === customer.id);
                     return (
-                        <Link key={customer.id} href={`/customers/${customer.id}`} style={{ textDecoration: "none" }}>
+                        <Link key={customer.id} href={`/customers/details?id=${customer.id}`} style={{ textDecoration: "none" }}>
                             <div className="card flex-between" style={{ transition: "border-color 0.2s" }}>
                                 <div style={{ display: "flex", gap: "1.5rem", alignItems: "center" }}>
                                     <div style={{

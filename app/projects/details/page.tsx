@@ -1,18 +1,56 @@
-import { getProjects, Project, getCustomer, getChecklistTemplates, getChecklists } from "@/lib/data";
+"use client";
+
+import { getProjects, Project, getCustomer, getChecklistTemplates, getChecklists, Customer, ChecklistTemplate, Checklist } from "@/lib/data";
 import Link from "next/link";
 import { ArrowLeft, CheckSquare, Clock, Banknote, Calendar, Building2, MapPin } from "lucide-react";
 import DocumentList from "./DocumentList";
 import EconomyDetails from "./EconomyDetails";
 import TimeTracking from "./TimeTracking";
 import NewChecklistButton from "./NewChecklistButton";
+import { useSearchParams } from "next/navigation";
+import { useEffect, useState, Suspense } from "react";
 
-// This is a workaround since we don't have a real database fetch by ID yet.
-// In Next.js App Router, params are promises in generic cases, but here we just filter static data.
-export default async function ProjectDetailsPage({ params }: { params: Promise<{ id: string }> }) {
-    const { id } = await params;
-    const projects = await getProjects();
-    const project = projects.find(p => p.id === id);
-    const customer = project ? await getCustomer(project.customerId) : undefined;
+function ProjectDetailsContent() {
+    const searchParams = useSearchParams();
+    const id = searchParams.get("id");
+
+    const [project, setProject] = useState<Project | undefined>(undefined);
+    const [customer, setCustomer] = useState<Customer | undefined>(undefined);
+    const [checklistTemplates, setChecklistTemplates] = useState<ChecklistTemplate[]>([]);
+    const [projectChecklists, setProjectChecklists] = useState<Checklist[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        if (id) {
+            getProjects().then(async (projects) => {
+                const foundProject = projects.find(p => p.id === id);
+                if (foundProject) {
+                    setProject(foundProject);
+
+                    const [cust, templates, allChecklists] = await Promise.all([
+                        getCustomer(foundProject.customerId),
+                        getChecklistTemplates(),
+                        getChecklists()
+                    ]);
+
+                    setCustomer(cust);
+                    setChecklistTemplates(templates);
+                    setProjectChecklists(allChecklists.filter(c => c.projectId === foundProject.id));
+                }
+                setLoading(false);
+            });
+        } else {
+            setLoading(false);
+        }
+    }, [id]);
+
+    if (loading) {
+        return (
+            <main className="container" style={{ paddingTop: "2rem" }}>
+                <p>Laster prosjektdata...</p>
+            </main>
+        );
+    }
 
     if (!project) {
         return (
@@ -27,11 +65,6 @@ export default async function ProjectDetailsPage({ params }: { params: Promise<{
     const profit = project.budgetExVAT - project.spentExVAT - totalTimeCost;
     const profitMargin = project.budgetExVAT > 0 ? (profit / project.budgetExVAT) * 100 : 0;
 
-    const checklistTemplates = await getChecklistTemplates();
-
-    const allChecklists = await getChecklists();
-    const projectChecklists = allChecklists.filter(c => c.projectId === project.id);
-
     return (
         <main className="container" style={{ paddingTop: "2rem", paddingBottom: "6rem" }}>
             <Link href="/projects" style={{ display: "inline-flex", alignItems: "center", gap: "0.5rem", color: "var(--muted-foreground)", marginBottom: "1rem" }}>
@@ -43,7 +76,7 @@ export default async function ProjectDetailsPage({ params }: { params: Promise<{
                     <h1 style={{ fontSize: "2.5rem", marginBottom: "0.5rem" }}>{project.name}</h1>
                     <div style={{ display: "flex", gap: "1.5rem", color: "var(--muted-foreground)" }}>
                         {customer && (
-                            <Link href={`/customers/${customer.id}`} style={{ display: "flex", alignItems: "center", gap: "0.5rem", color: "var(--primary)", textDecoration: "none" }}>
+                            <Link href={`/customers/details?id=${customer.id}`} style={{ display: "flex", alignItems: "center", gap: "0.5rem", color: "var(--primary)", textDecoration: "none" }}>
                                 <Building2 size={16} /> {customer.name}
                             </Link>
                         )}
@@ -109,7 +142,7 @@ export default async function ProjectDetailsPage({ params }: { params: Promise<{
                             </span>
                         </div>
 
-                        <Link href={`/projects/${project.id}/new-offer`} className="btn btn-outline" style={{ width: "100%", marginTop: "1rem", textAlign: "center", display: "block" }}>
+                        <Link href={`/projects/details/new-offer?projectId=${project.id}`} className="btn btn-outline" style={{ width: "100%", marginTop: "1rem", textAlign: "center", display: "block" }}>
                             + Lag Tilbud
                         </Link>
 
@@ -132,7 +165,7 @@ export default async function ProjectDetailsPage({ params }: { params: Promise<{
                             const totalCount = list.items.length;
                             const percentage = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
                             return (
-                                <Link key={list.id} href={`/checklists/${list.id}`} style={{ textDecoration: "none" }}>
+                                <Link key={list.id} href={`/checklists/details?id=${list.id}`} style={{ textDecoration: "none" }}>
                                     <div className="card" style={{ transition: "border-color 0.2s" }}>
                                         <div className="flex-between" style={{ marginBottom: "0.5rem" }}>
                                             <div style={{ display: "flex", gap: "0.75rem", alignItems: "center" }}>
@@ -169,5 +202,13 @@ export default async function ProjectDetailsPage({ params }: { params: Promise<{
             <DocumentList project={project} />
             <EconomyDetails project={project} />
         </main>
+    );
+}
+
+export default function ProjectDetailsPage() {
+    return (
+        <Suspense fallback={<div className="container" style={{ paddingTop: "2rem" }}>Laster...</div>}>
+            <ProjectDetailsContent />
+        </Suspense>
     );
 }

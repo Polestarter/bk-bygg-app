@@ -8,7 +8,7 @@ import OfferStepPrice from "./OfferStepPrice";
 import OfferStepConditions from "./OfferStepConditions";
 import OfferStepPreview from "./OfferStepPreview";
 import OfferStepCustomer from "./OfferStepCustomer";
-import { createOfferAction } from "@/lib/actions";
+import { addOffer } from "@/lib/db";
 import { useRouter } from "next/navigation";
 
 export default function OfferWizard({ project, customers = [], initialData }: { project?: Project, customers?: Customer[], initialData?: Offer }) {
@@ -73,8 +73,9 @@ export default function OfferWizard({ project, customers = [], initialData }: { 
             alert("Du må velge en kunde");
             return;
         }
-        await createOfferAction(offer as Offer);
+        await addOffer(offer as Offer);
         router.push("/offers"); // Redirect to offers list
+        router.refresh();
     };
 
     const steps = [

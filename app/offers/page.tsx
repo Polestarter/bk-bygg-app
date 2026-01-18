@@ -1,14 +1,33 @@
+"use client";
+
 import { getOffers, getCustomers } from "@/lib/db";
 import Link from "next/link";
 import { Plus, FileText, CheckCircle, XCircle } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Offer, Customer } from "@/lib/types";
 
-export const dynamic = "force-dynamic";
+export default function OffersPage() {
+    const [offers, setOffers] = useState<Offer[]>([]);
+    const [customers, setCustomers] = useState<Customer[]>([]);
+    const [loading, setLoading] = useState(true);
 
-export default async function OffersPage() {
-    const offers = await getOffers();
-    const customers = await getCustomers();
+    useEffect(() => {
+        Promise.all([getOffers(), getCustomers()]).then(([offs, custs]) => {
+            setOffers(offs);
+            setCustomers(custs);
+            setLoading(false);
+        });
+    }, []);
 
     const getCustomerName = (id: string) => customers.find(c => c.id === id)?.name || "Ukjent kunde";
+
+    if (loading) {
+        return (
+            <main className="container" style={{ paddingTop: "2rem" }}>
+                <p>Laster tilbud...</p>
+            </main>
+        );
+    }
 
     return (
         <main className="container" style={{ paddingTop: "2rem", paddingBottom: "6rem" }}>
@@ -28,7 +47,7 @@ export default async function OffersPage() {
                     offers.map(offer => {
                         const customerName = getCustomerName(offer.customerId);
                         return (
-                            <Link key={offer.id} href={`/offers/${offer.id}`} style={{ textDecoration: "none" }}>
+                            <Link key={offer.id} href={`/offers/details?id=${offer.id}`} style={{ textDecoration: "none" }}>
                                 <div className="card" style={{ transition: "border-color 0.2s" }}>
                                     <div className="flex-between" style={{ marginBottom: "0.5rem" }}>
                                         <div>

@@ -1,11 +1,41 @@
-import { getCustomer, getCustomerProjects } from "@/lib/data";
+"use client";
+
+import { getCustomer, getCustomerProjects, Project, Customer } from "@/lib/data";
 import Link from "next/link";
 import { ArrowLeft, Phone, Mail, MapPin, Building2, Banknote } from "lucide-react";
+import { useSearchParams } from "next/navigation";
+import { useEffect, useState, Suspense } from "react";
 
-export default async function CustomerDetailsPage({ params }: { params: Promise<{ id: string }> }) {
-    const { id } = await params;
-    const customer = await getCustomer(id);
-    const projects = await getCustomerProjects(id);
+function CustomerDetailsContent() {
+    const searchParams = useSearchParams();
+    const id = searchParams.get("id");
+
+    const [customer, setCustomer] = useState<Customer | undefined>(undefined);
+    const [projects, setProjects] = useState<Project[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        if (id) {
+            Promise.all([
+                getCustomer(id),
+                getCustomerProjects(id)
+            ]).then(([cust, projs]) => {
+                setCustomer(cust);
+                setProjects(projs);
+                setLoading(false);
+            });
+        } else {
+            setLoading(false);
+        }
+    }, [id]);
+
+    if (loading) {
+        return (
+            <main className="container" style={{ paddingTop: "2rem" }}>
+                <p>Laster kundedata...</p>
+            </main>
+        );
+    }
 
     if (!customer) {
         return (
@@ -85,7 +115,7 @@ export default async function CustomerDetailsPage({ params }: { params: Promise<
             <h2>Prosjekter for {customer.name}</h2>
             <div style={{ display: "grid", gap: "1rem", marginTop: "1rem" }}>
                 {projects.map(project => (
-                    <Link key={project.id} href={`/projects/${project.id}`} style={{ textDecoration: "none" }}>
+                    <Link key={project.id} href={`/projects/details?id=${project.id}`} style={{ textDecoration: "none" }}>
                         <div className="card flex-between" style={{ transition: "border-color 0.2s" }}>
                             <div>
                                 <h3 style={{ fontSize: "1.1rem" }}>{project.name}</h3>
@@ -108,5 +138,13 @@ export default async function CustomerDetailsPage({ params }: { params: Promise<
                 )}
             </div>
         </main>
+    );
+}
+
+export default function CustomerDetailsPage() {
+    return (
+        <Suspense fallback={<div className="container" style={{ paddingTop: "2rem" }}>Laster...</div>}>
+            <CustomerDetailsContent />
+        </Suspense>
     );
 }

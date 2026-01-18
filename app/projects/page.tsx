@@ -1,9 +1,28 @@
-import { getProjects } from "@/lib/data";
+"use client";
+
+import { getProjects, Project } from "@/lib/data";
 import Link from "next/link";
 import { Plus, Search } from "lucide-react";
+import { useEffect, useState } from "react";
 
-export default async function ProjectsPage() {
-    const projects = await getProjects();
+export default function ProjectsPage() {
+    const [projects, setProjects] = useState<Project[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        getProjects().then((data) => {
+            setProjects(data);
+            setLoading(false);
+        });
+    }, []);
+
+    if (loading) {
+        return (
+            <main className="container" style={{ paddingTop: "2rem" }}>
+                <p>Laster prosjekter...</p>
+            </main>
+        );
+    }
 
     return (
         <main className="container" style={{ paddingTop: "2rem", paddingBottom: "4rem" }}>
@@ -36,7 +55,7 @@ export default async function ProjectsPage() {
 
             <div style={{ display: "grid", gap: "1rem" }}>
                 {projects.map(project => (
-                    <Link key={project.id} href={`/projects/${project.id}`} style={{ textDecoration: "none" }}>
+                    <Link key={project.id} href={`/projects/details?id=${project.id}`} style={{ textDecoration: "none" }}>
                         <div className="card flex-between" style={{ transition: "border-color 0.2s" }}>
                             <div style={{ display: "flex", gap: "1.5rem", alignItems: "center" }}>
                                 <div style={{

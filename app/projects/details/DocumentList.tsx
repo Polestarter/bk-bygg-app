@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Project, ProjectFile } from "@/lib/types";
-import { uploadFile } from "@/lib/actions";
+// import { uploadFile } from "@/lib/actions"; // Server Action removed
 import { FileText, Upload, Download, File as FileIcon } from "lucide-react";
 import Link from "next/link";
 
@@ -51,8 +51,9 @@ export default function DocumentList({ project }: { project: Project }) {
 
             {isUploading && (
                 <div className="card" style={{ marginBottom: "2rem", backgroundColor: "var(--secondary)" }}>
-                    <form action={async (formData) => {
-                        await uploadFile(formData);
+                    <form onSubmit={(e) => {
+                        e.preventDefault();
+                        alert("Filopplasting er foreløpig ikke tilgjengelig i denne versjonen (krever Supabase Storage).");
                         setIsUploading(false);
                     }} style={{ display: "grid", gap: "1rem" }}>
                         <input type="hidden" name="projectId" value={project.id} />

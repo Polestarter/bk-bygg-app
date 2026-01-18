@@ -1,14 +1,44 @@
 "use client";
 
 import { useState } from "react";
-import { Customer } from "@/lib/types";
-import { createProjectAction } from "@/lib/actions";
+import { Customer, Project, PricingType } from "@/lib/types";
+import { addProject } from "@/lib/db";
 import Link from "next/link";
 import { ArrowLeft, Save } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 export default function ProjectForm({ customers }: { customers: Customer[] }) {
+    const router = useRouter();
     const [pricingType, setPricingType] = useState("Fastpris");
     const [budget, setBudget] = useState("");
+
+    const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+        e.preventDefault();
+        const formData = new FormData(e.currentTarget);
+
+        const newProject: Project = {
+            id: Math.random().toString(36).substring(2, 9),
+            name: formData.get("name") as string,
+            customerId: formData.get("customerId") as string,
+            address: formData.get("address") as string,
+            pricingType: formData.get("pricingType") as PricingType,
+            status: "Planlagt",
+            budgetExVAT: Number(formData.get("budget")) || 0,
+            spentExVAT: 0,
+            startDate: formData.get("startDate") as string || new Date().toISOString().split("T")[0],
+            endDate: undefined,
+            files: [],
+            expenses: [],
+            extras: [],
+            timeEntries: []
+        };
+
+        if (!newProject.name || !newProject.customerId) return;
+
+        await addProject(newProject);
+        router.push("/projects");
+        router.refresh();
+    };
 
     return (
         <main className="container" style={{ paddingTop: "2rem", paddingBottom: "4rem", maxWidth: "800px" }}>
@@ -20,7 +50,7 @@ export default function ProjectForm({ customers }: { customers: Customer[] }) {
                 <h1>Nytt Prosjekt</h1>
             </div>
 
-            <form action={createProjectAction} className="card" style={{ display: "grid", gap: "1.5rem" }}>
+            <form onSubmit={handleSubmit} className="card" style={{ display: "grid", gap: "1.5rem" }}>
                 <div>
                     <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: "500" }}>Kunde</label>
                     <select

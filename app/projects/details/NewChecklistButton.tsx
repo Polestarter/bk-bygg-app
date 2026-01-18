@@ -1,11 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { ChecklistTemplate } from "@/lib/types";
-import { createChecklistAction } from "@/lib/actions";
+import { Checklist, ChecklistTemplate } from "@/lib/types";
+import { addChecklist } from "@/lib/db";
 import { Plus, X } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 export default function NewChecklistButton({ projectId, templates }: { projectId: string; templates: ChecklistTemplate[] }) {
+    const router = useRouter();
     const [isOpen, setIsOpen] = useState(false);
 
     if (!isOpen) {
@@ -16,15 +18,47 @@ export default function NewChecklistButton({ projectId, templates }: { projectId
         );
     }
 
+    const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+        e.preventDefault();
+        const formData = new FormData(e.currentTarget);
+        const name = formData.get("name") as string;
+        const templateId = formData.get("templateId") as string;
+        const dueDate = formData.get("dueDate") as string;
+
+        if (!name) return;
+
+        let items: any[] = [];
+        if (templateId) {
+            const template = templates.find(t => t.id === templateId);
+            if (template) {
+                items = template.items.map(i => ({
+                    id: Math.random().toString(36).substring(2, 9),
+                    text: i.text,
+                    status: null
+                }));
+            }
+        }
+
+        const newChecklist: Checklist = {
+            id: Math.random().toString(36).substring(2, 9),
+            projectId,
+            name,
+            status: "Ny",
+            items,
+            dueDate
+        };
+
+        await addChecklist(newChecklist);
+        setIsOpen(false);
+        router.refresh();
+    };
+
     return (
         <div style={{
             position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
             backgroundColor: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 50
         }}>
-            <form action={async (formData) => {
-                await createChecklistAction(formData);
-                setIsOpen(false);
-            }} className="card" style={{ width: "90%", maxWidth: "500px", padding: "2rem", display: "grid", gap: "1.5rem" }}>
+            <form onSubmit={handleSubmit} className="card" style={{ width: "90%", maxWidth: "500px", padding: "2rem", display: "grid", gap: "1.5rem" }}>
 
                 <div className="flex-between">
                     <h2>Ny Sjekkliste</h2>
@@ -52,8 +86,6 @@ export default function NewChecklistButton({ projectId, templates }: { projectId
                     <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: "500" }}>Frist (Valgfritt)</label>
                     <input name="dueDate" type="date" className="input" style={{ width: "100%", padding: "0.75rem" }} />
                 </div>
-
-                <input type="hidden" name="projectId" value={projectId} />
 
                 <div style={{ display: "flex", justifyContent: "flex-end", gap: "1rem" }}>
                     <button type="button" onClick={() => setIsOpen(false)} className="btn btn-secondary">Avbryt</button>

@@ -2,16 +2,40 @@
 
 import { useState } from "react";
 import { Project, TimeEntry } from "@/lib/types";
-import { logTime } from "@/lib/actions";
+import { updateProject } from "@/lib/db";
 import { Clock, Plus, Timer } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 export default function TimeTracking({ project }: { project: Project }) {
+    const router = useRouter();
     const [showLogTime, setShowLogTime] = useState(false);
     const timeEntries = project.timeEntries || [];
 
     const totalHours = timeEntries.reduce((sum, t) => sum + t.hours, 0);
     const totalTimeCost = timeEntries.reduce((sum, t) => sum + (t.hours * t.hourlyRate), 0);
     const averageRate = totalHours > 0 ? totalTimeCost / totalHours : 0;
+
+    const handleLogTime = async (e: React.FormEvent<HTMLFormElement>) => {
+        e.preventDefault();
+        const formData = new FormData(e.currentTarget);
+
+        const newTimeEntry: TimeEntry = {
+            id: Math.random().toString(36).substring(2, 9),
+            description: formData.get("description") as string,
+            hours: Number(formData.get("hours")),
+            hourlyRate: Number(formData.get("hourlyRate")),
+            date: formData.get("date") as string
+        };
+
+        const updatedProject = {
+            ...project,
+            timeEntries: [...timeEntries, newTimeEntry]
+        };
+
+        await updateProject(updatedProject);
+        setShowLogTime(false);
+        router.refresh();
+    };
 
     return (
         <div style={{ marginTop: "3rem" }}>
@@ -30,10 +54,7 @@ export default function TimeTracking({ project }: { project: Project }) {
                     </div>
 
                     {showLogTime && (
-                        <form action={async (formData) => {
-                            await logTime(formData);
-                            setShowLogTime(false);
-                        }} style={{ backgroundColor: "var(--background)", padding: "1rem", borderRadius: "var(--radius)", marginBottom: "1rem", border: "1px solid var(--border)" }}>
+                        <form onSubmit={handleLogTime} style={{ backgroundColor: "var(--background)", padding: "1rem", borderRadius: "var(--radius)", marginBottom: "1rem", border: "1px solid var(--border)" }}>
                             <input type="hidden" name="projectId" value={project.id} />
                             <div style={{ display: "grid", gap: "0.5rem" }}>
                                 <input name="description" placeholder="Hva har du gjort?" required className="input" style={{ width: "100%", padding: "0.5rem" }} />

@@ -1,11 +1,12 @@
 "use client";
 import { Offer, Customer } from "@/lib/types";
 import { useState } from "react";
-import { createCustomerDirectAction } from "@/lib/actions";
+import { addCustomer } from "@/lib/db";
 import { Check, Plus, User } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 export default function OfferStepCustomer({ offer, updateOffer, customers }: { offer: Partial<Offer>, updateOffer: (d: Partial<Offer>) => void, customers: Customer[] }) {
-
+    const router = useRouter();
     const [isCreating, setIsCreating] = useState(false);
     const [newCustomer, setNewCustomer] = useState<Partial<Customer>>({
         name: "", email: "", phone: "", address: ""
@@ -13,16 +14,20 @@ export default function OfferStepCustomer({ offer, updateOffer, customers }: { o
 
     const handleCreate = async () => {
         if (!newCustomer.name) return;
-        const id = await createCustomerDirectAction(newCustomer as Customer);
+
+        const id = Math.random().toString(36).substring(2, 9);
+        const customerToAdd: Customer = {
+            id,
+            name: newCustomer.name || "",
+            email: newCustomer.email || "",
+            phone: newCustomer.phone || "",
+            address: newCustomer.address || ""
+        };
+
+        await addCustomer(customerToAdd);
         updateOffer({ customerId: id });
         setIsCreating(false);
-        // Customer list update relies on parent re-rendering or we optimistically assume it worked. 
-        // In a real app we'd refresh the list, but for now the parent might not see it immediately.
-        // Actually since we use a Server Action that revalidates, the parent SHOULD update if this was a server component, 
-        // but this is a client component receiving props. The props won't update automatically without a refresh.
-        // Workaround: We create a fake customer object in the list locally or just set the ID and trust the flow.
-        // Better: We force a router.refresh() in the parent? 
-        // Let's just update the local state.
+        router.refresh();
     };
 
     return (

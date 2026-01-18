@@ -1,10 +1,33 @@
 "use client";
 
-import { createCustomerAction } from "@/lib/actions";
+import { addCustomer } from "@/lib/db";
+import { Customer } from "@/lib/types";
 import Link from "next/link";
 import { ArrowLeft, Save } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 export default function CustomerForm() {
+    const router = useRouter();
+
+    const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+        e.preventDefault();
+        const formData = new FormData(e.currentTarget);
+
+        const newCustomer: Customer = {
+            id: Math.random().toString(36).substring(2, 9),
+            name: formData.get("name") as string,
+            email: formData.get("email") as string,
+            phone: formData.get("phone") as string,
+            address: formData.get("address") as string,
+        };
+
+        if (!newCustomer.name) return;
+
+        await addCustomer(newCustomer);
+        router.push("/customers");
+        router.refresh();
+    };
+
     return (
         <main className="container" style={{ paddingTop: "2rem", paddingBottom: "4rem", maxWidth: "800px" }}>
             <Link href="/customers" style={{ display: "inline-flex", alignItems: "center", gap: "0.5rem", color: "var(--muted-foreground)", marginBottom: "1rem" }}>
@@ -15,7 +38,7 @@ export default function CustomerForm() {
                 <h1>Ny Kunde</h1>
             </div>
 
-            <form action={createCustomerAction} className="card" style={{ display: "grid", gap: "1.5rem" }}>
+            <form onSubmit={handleSubmit} className="card" style={{ display: "grid", gap: "1.5rem" }}>
                 <div>
                     <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: "500" }}>Navn</label>
                     <input

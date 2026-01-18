@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Checklist, ItemStatus } from "@/lib/types";
-import { saveTemplateAction } from "@/lib/actions";
+import { Checklist, ItemStatus, ChecklistTemplate } from "@/lib/types";
+import { addChecklistTemplate } from "@/lib/db";
 import Link from "next/link";
 import { ArrowLeft, Save, CheckCircle, XCircle, MinusCircle, Camera, MessageSquare, ChevronDown, ChevronUp, Copy } from "lucide-react";
 
@@ -10,6 +10,24 @@ export default function ChecklistDetailClient({ initialChecklist }: { initialChe
     const [checklist, setChecklist] = useState<Checklist>(initialChecklist);
     const [expandedItem, setExpandedItem] = useState<string | null>(null);
     const [showSaveTemplate, setShowSaveTemplate] = useState(false);
+
+    const handleSaveTemplate = async (e: React.FormEvent<HTMLFormElement>) => {
+        e.preventDefault();
+        const formData = new FormData(e.currentTarget);
+        const templateName = formData.get("templateName") as string;
+
+        if (!templateName) return;
+
+        const newTemplate: ChecklistTemplate = {
+            id: Math.random().toString(36).substring(2, 9),
+            name: templateName,
+            items: checklist.items.map(item => ({ text: item.text }))
+        };
+
+        await addChecklistTemplate(newTemplate);
+        setShowSaveTemplate(false);
+        alert("Mal lagret!");
+    };
 
     const updateItemStatus = (itemId: string, status: ItemStatus) => {
         setChecklist(prev => {
@@ -59,7 +77,7 @@ export default function ChecklistDetailClient({ initialChecklist }: { initialChe
 
     const completedCount = checklist.items.filter(i => i.status === "Safe" || i.status === "NA").length;
     const totalCount = checklist.items.length;
-    const percentage = Math.round((completedCount / totalCount) * 100);
+    const percentage = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
 
     const handleDownloadPDF = async () => {
         if (typeof window === "undefined") return;
@@ -128,11 +146,7 @@ export default function ChecklistDetailClient({ initialChecklist }: { initialChe
                         position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
                         backgroundColor: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 50
                     }}>
-                        <form action={async (formData) => {
-                            await saveTemplateAction(formData);
-                            setShowSaveTemplate(false);
-                            alert("Mal lagret!");
-                        }} className="card" style={{ width: "90%", maxWidth: "400px", padding: "2rem", display: "grid", gap: "1.5rem" }}>
+                        <form onSubmit={handleSaveTemplate} className="card" style={{ width: "90%", maxWidth: "400px", padding: "2rem", display: "grid", gap: "1.5rem" }}>
                             <div className="flex-between">
                                 <h3 style={{ margin: 0 }}>Lagre som Mal</h3>
                                 <button type="button" onClick={() => setShowSaveTemplate(false)} style={{ background: "none", border: "none", cursor: "pointer" }}>

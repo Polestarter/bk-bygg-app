@@ -1,12 +1,33 @@
+"use client";
+
 import { getChecklists, getProjects } from "@/lib/data";
 import Link from "next/link";
 import { Plus, CheckSquare, Calendar, ArrowRight } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Checklist, Project } from "@/lib/types";
 
-export default async function ChecklistsPage() {
-    const checklists = await getChecklists();
-    const projects = await getProjects();
+export default function ChecklistsPage() {
+    const [checklists, setChecklists] = useState<Checklist[]>([]);
+    const [projects, setProjects] = useState<Project[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        Promise.all([getChecklists(), getProjects()]).then(([lists, projs]) => {
+            setChecklists(lists);
+            setProjects(projs);
+            setLoading(false);
+        });
+    }, []);
 
     const getProjectName = (id: string) => projects.find(p => p.id === id)?.name || "Ukjent prosjekt";
+
+    if (loading) {
+        return (
+            <main className="container" style={{ paddingTop: "2rem" }}>
+                <p>Laster sjekklister...</p>
+            </main>
+        );
+    }
 
     return (
         <main className="container" style={{ paddingTop: "2rem", paddingBottom: "4rem" }}>
@@ -24,10 +45,10 @@ export default async function ChecklistsPage() {
                 {checklists.map(list => {
                     const completedCount = list.items.filter(i => i.status === "Safe" || i.status === "NA").length;
                     const totalCount = list.items.length;
-                    const percentage = Math.round((completedCount / totalCount) * 100);
+                    const percentage = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
 
                     return (
-                        <Link key={list.id} href={`/checklists/${list.id}`} style={{ textDecoration: "none" }}>
+                        <Link key={list.id} href={`/checklists/details?id=${list.id}`} style={{ textDecoration: "none" }}>
                             <div className="card" style={{ transition: "border-color 0.2s" }}>
                                 <div className="flex-between" style={{ marginBottom: "1rem" }}>
                                     <div style={{ display: "flex", gap: "1rem", alignItems: "center" }}>
