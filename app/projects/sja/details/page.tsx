@@ -226,9 +226,25 @@ function SJADetailContent() {
 
             <div className="flex-between" style={{ alignItems: "flex-start", marginBottom: "2rem" }}>
                 <div>
-                    <h1 style={{ marginBottom: "0.5rem" }}>SJA: {sja.location}</h1>
-                    <p style={{ color: "var(--muted-foreground)" }}>{sja.description}</p>
-                    <p style={{ fontSize: "0.875rem", color: "var(--muted-foreground)" }}>Deltakere: {sja.participants}</p>
+                    <h1 style={{ marginBottom: "0.5rem" }}>SJA: {sja.workOperation || sja.description || "Uten navn"}</h1>
+                    <div style={{ display: "grid", gap: "0.5rem", color: "var(--muted-foreground)" }}>
+                        <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+                            <strong>Sted:</strong> {sja.location}
+                        </div>
+                        {sja.weather && (
+                            <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+                                <strong>Værforhold:</strong> {sja.weather}
+                            </div>
+                        )}
+                        <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+                            <strong>Deltakere:</strong> {sja.participants}
+                        </div>
+                        {sja.emergencyResponse && (
+                            <div style={{ display: "flex", gap: "0.5rem", alignItems: "center", color: "var(--destructive)" }}>
+                                <strong>Beredskap:</strong> {sja.emergencyResponse}
+                            </div>
+                        )}
+                    </div>
                 </div>
                 {!isSigned && (
                     <div style={{ display: "flex", gap: "1rem" }}>

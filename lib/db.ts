@@ -8,29 +8,38 @@ import { Project, Customer, Checklist, ChecklistTemplate, Offer, SJA, SJATemplat
 const clean = <T>(obj: T): T => JSON.parse(JSON.stringify(obj));
 
 export const getSJATemplates = async (): Promise<SJATemplate[]> => {
-    // Mock templates for now
     return [
         {
             id: "1",
-            name: "Arbeid i høyden (Stillas/Lift)",
+            name: "Arbeid i høyden (Stillas/Lift/Tak)",
             risks: [
-                { activity: "Montering av stillas", description: "Fall fra høyde", probability: "Middels", severity: "Høy", measures: [{ id: "m1", description: "Bruk fallsikring", responsible: "Alle", completed: false }] },
-                { activity: "Arbeid på stillas", description: "Gjenstander som faller ned", probability: "Middels", severity: "Middels", measures: [{ id: "m2", description: "Sikre verktøy", responsible: "Alle", completed: false }] }
+                { activity: "Montering/bruk av stillas", description: "Fall fra høyde ved manglende sikring", probability: "Middels", severity: "Høy", measures: [{ id: "m1", description: "Bruk fallsikring/sele ved arbeid utenfor rekkverk", responsible: "Alle", completed: false }, { id: "m1b", description: "Kontroll av grønt kort på stillas", responsible: "Leder", completed: false }] },
+                { activity: "Arbeid på tak/kant", description: "Fallende gjenstander", probability: "Middels", severity: "Middels", measures: [{ id: "m2", description: "Sikre verktøy mot fall", responsible: "Alle", completed: false }, { id: "m2b", description: "Absperring av området under arbeid", responsible: "Leder", completed: false }] }
             ]
         },
         {
             id: "2",
-            name: "Riving",
+            name: "Riving og Sanering",
             risks: [
-                { activity: "Riving av vegg", description: "Støv og partikler", probability: "Høy", severity: "Lav", measures: [{ id: "m3", description: "Bruk støvmaske", responsible: "Alle", completed: false }] },
-                { activity: "Riving av vegg", description: "Elektrisk støt", probability: "Lav", severity: "Høy", measures: [{ id: "m4", description: "Koble ut strøm", responsible: "Leder", completed: false }] }
+                { activity: "Riving av konstruksjoner", description: "Eksponering for støv (kvarts, asbest)", probability: "Høy", severity: "Middels", measures: [{ id: "m3", description: "Benytte støvmaske (P3) og vernebriller", responsible: "Alle", completed: false }, { id: "m3b", description: "Vanne ned støv ved riving", responsible: "Alle", completed: false }] },
+                { activity: "Skjulte installasjoner", description: "Fare for elektrisk støt eller vannlekkasje", probability: "Middels", severity: "Høy", measures: [{ id: "m4", description: "Sjekke tegninger og kursfortegnelse", responsible: "Leder", completed: false }, { id: "m4b", description: "Koble ut strøm i arbeidsområdet", responsible: "Leder", completed: false }] },
+                { activity: "Håndtering av avfall", description: "Kutt/stikkskader fra skarpe kanter/spiker", probability: "Høy", severity: "Lav", measures: [{ id: "m5", description: "Bruk vernehansker (Kuttklasse C/D)", responsible: "Alle", completed: false }] }
             ]
         },
         {
             id: "3",
-            name: "Taktekking",
+            name: "Tunge Løft og Montering",
             risks: [
-                { activity: "Ferdsel på tak", description: "Fall fra kant", probability: "Middels", severity: "Høy", measures: [{ id: "m5", description: "Montere rekkverk", responsible: "Leder", completed: false }] }
+                { activity: "Løft av gips/bjelker", description: "Belastningsskader ved tunge løft", probability: "Høy", severity: "Middels", measures: [{ id: "m6", description: "Være to personer på tunge løft", responsible: "Alle", completed: false }, { id: "m6b", description: "Bruke løftehjelpemidler (gipsheis, kran)", responsible: "Leder", completed: false }] },
+                { activity: "Bruk av kranbil", description: "Klemskader ved landing av last", probability: "Middels", severity: "Høy", measures: [{ id: "m7", description: "Ingen personer under hengende last", responsible: "Alle", completed: false }, { id: "m7b", description: "Bruke styrepinner/tau på last", responsible: "UE", completed: false }] }
+            ]
+        },
+        {
+            id: "4",
+            name: "Bruk av El-verktøy (Sag/Drill)",
+            risks: [
+                { activity: "Kapping av materialer", description: "Kuttfare og sprut av flis", probability: "Middels", severity: "Middels", measures: [{ id: "m8", description: "Sjekke at vernedeksel er på plass", responsible: "Alle", completed: false }, { id: "m8b", description: "Bruk vernebriller og hørselvern", responsible: "Alle", completed: false }] },
+                { activity: "Skjøteledninger", description: "Snublefare og strømgjennomgang", probability: "Middels", severity: "Lav", measures: [{ id: "m9", description: "Henge opp kabler", responsible: "Alle", completed: false }, { id: "m9b", description: "Visuell sjekk av kabler for skade", responsible: "Alle", completed: false }] }
             ]
         }
     ];

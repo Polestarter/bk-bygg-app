@@ -166,8 +166,16 @@ export interface SJA {
     participants: string; // Names of people involved
     risks: SJARisk[];
     status: "Utkast" | "Signert";
-    signatureLeader?: string; // Base64 or just a name for now
+    // Signatures
+    signatureLeader?: string;
     signatureLeaderDate?: string;
+    signatureExecutor?: string; // Sentralt: Signatur fra utførende (den som gjør jobben)
+    signatureExecutorDate?: string;
+
+    // SJA 2.0 Fields
+    weather?: string; // Værforhold
+    workOperation?: string; // Konkret arbeidsoperasjon
+    emergencyResponse?: string; // Beredskap
 }
 
 export interface SJATemplate {
