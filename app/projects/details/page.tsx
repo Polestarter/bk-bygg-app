@@ -4,7 +4,7 @@
 import { getProjects, getCustomer, getChecklistTemplates, getChecklists, deleteProject } from "@/lib/db";
 import { Project, Customer, ChecklistTemplate, Checklist } from "@/lib/types";
 import Link from "next/link";
-import { ArrowLeft, CheckSquare, Clock, Banknote, Calendar, Building2, MapPin, Edit, Trash2 } from "lucide-react";
+import { ArrowLeft, CheckSquare, Clock, Banknote, Calendar, Building2, MapPin, Edit, Trash2, ShieldCheck } from "lucide-react";
 import DocumentList from "./DocumentList";
 import EconomyDetails from "./EconomyDetails";
 import TimeTracking from "./TimeTracking";
@@ -234,6 +234,29 @@ function ProjectDetailsContent() {
                         <p style={{ color: "var(--muted-foreground)", fontStyle: "italic" }}>Ingen sjekklister opprettet for dette prosjektet enda.</p>
                     </div>
                 )}
+            </div>
+
+            <div style={{ marginBottom: "3rem" }}>
+                <div className="flex-between" style={{ marginBottom: "1rem" }}>
+                    <h2>HMS & Sikkerhet</h2>
+                </div>
+                <Link href={`/projects/sja?projectId=${project.id}`} style={{ textDecoration: "none" }}>
+                    <div className="card" style={{ display: "flex", alignItems: "center", gap: "1rem", transition: "border-color 0.2s" }}>
+                        <div style={{
+                            width: "48px", height: "48px", borderRadius: "12px",
+                            backgroundColor: "rgba(16, 185, 129, 0.1)", display: "flex",
+                            alignItems: "center", justifyContent: "center"
+                        }}>
+                            <ShieldCheck size={24} color="#10b981" />
+                        </div>
+                        <div>
+                            <h3 style={{ fontSize: "1.1rem", margin: 0, marginBottom: "0.25rem" }}>Sikker Jobb Analyse (SJA)</h3>
+                            <p style={{ margin: 0, color: "var(--muted-foreground)", fontSize: "0.875rem" }}>
+                                Risikovurdering, tiltak og signering
+                            </p>
+                        </div>
+                    </div>
+                </Link>
             </div>
 
             <TimeTracking project={project} onUpdate={refreshProject} />

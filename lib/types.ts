@@ -137,3 +137,41 @@ export interface Offer {
     // Conditions
     selectedConditionIds: string[];
 }
+
+export type RiskProbability = "Lav" | "Middels" | "Høy";
+export type RiskSeverity = "Lav" | "Middels" | "Høy";
+
+export interface SJAMeasure {
+    id: string;
+    description: string;
+    responsible: string; // "Alle", "Leder", or specific name
+    completed: boolean;
+}
+
+export interface SJARisk {
+    id: string;
+    activity: string; // e.g. "Arbeid i høyden"
+    description: string; // What can go wrong?
+    probability: RiskProbability;
+    severity: RiskSeverity;
+    measures: SJAMeasure[];
+}
+
+export interface SJA {
+    id: string;
+    projectId: string;
+    date: string;
+    location: string;
+    description: string; // Description of the job
+    participants: string; // Names of people involved
+    risks: SJARisk[];
+    status: "Utkast" | "Signert";
+    signatureLeader?: string; // Base64 or just a name for now
+    signatureLeaderDate?: string;
+}
+
+export interface SJATemplate {
+    id: string;
+    name: string;
+    risks: Omit<SJARisk, "id">[];
+}

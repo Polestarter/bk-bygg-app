@@ -1,5 +1,5 @@
-import { getProjects as dbGetProjects, getCustomers as dbGetCustomers, getChecklists as dbGetChecklists, getChecklistTemplates as dbGetChecklistTemplates } from "./db";
-import { Project, Customer, Checklist } from "./types";
+import { getProjects as dbGetProjects, getCustomers as dbGetCustomers, getChecklists as dbGetChecklists, getChecklistTemplates as dbGetChecklistTemplates, getSJAs as dbGetSJAs, getSJATemplates as dbGetSJATemplates, addSJA as dbAddSJA, getSJA as dbGetSJA, updateSJA as dbUpdateSJA } from "./db";
+import { Project, Customer, Checklist, SJA } from "./types";
 
 // Re-export types for convenience
 export * from "./types";
@@ -44,4 +44,24 @@ export async function getStats() {
     const totalSpentExVAT = projects.reduce((acc, p) => acc + p.spentExVAT, 0);
 
     return { active, completed, totalBudgetExVAT, totalSpentExVAT };
+}
+
+export async function getSJAs(projectId: string): Promise<SJA[]> {
+    return await dbGetSJAs(projectId);
+}
+
+export async function getSJATemplates() {
+    return await dbGetSJATemplates();
+}
+
+export async function getSJA(id: string): Promise<SJA | undefined> {
+    return await dbGetSJA(id);
+}
+
+export async function addSJA(sja: SJA) {
+    return await dbAddSJA(sja);
+}
+
+export async function updateSJA(sja: SJA) {
+    return await dbUpdateSJA(sja);
 }
