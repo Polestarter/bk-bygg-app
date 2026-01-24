@@ -233,15 +233,50 @@ function SJADetailContent() {
     const handleSendEmail = async () => {
         if (!sja || !project) return;
 
-        // Trigger download so user has file to attach
-        await handleDownloadPDF();
+        // 1. Generate PDF Blob
+        const input = document.getElementById('sja-content');
+        if (!input) return;
 
-        const subject = encodeURIComponent(`Signert SJA: ${sja.workOperation || "SJA"} - ${project.address}`);
-        const body = encodeURIComponent(`Hei,\n\nVedlagt ligger signert SJA for arbeid på ${project.address}.\n\nArbeidsoperasjon: ${sja.workOperation || "SJA"}\nDato: ${new Date().toLocaleDateString()}\n\nMvh,\n${sja.signatureLeader?.replace("Signert av ", "") || ""}`);
+        try {
+            const canvas = await html2canvas(input, { scale: 2 } as any);
+            const imgData = canvas.toDataURL('image/png');
+            const pdf = new jsPDF('p', 'mm', 'a4');
+            const pdfWidth = pdf.internal.pageSize.getWidth();
+            const imgWidth = canvas.width;
+            const imgHeight = canvas.height;
+            const ratio = pdfWidth / imgWidth;
+            const contentHeight = imgHeight * ratio;
 
-        window.location.href = `mailto:?subject=${subject}&body=${body}`;
+            pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, contentHeight);
 
-        alert("PDF er lastet ned. E-postklient åpnes. Vennligst legg ved filen manuelt.");
+            const pdfBlob = pdf.output('blob');
+            const safeProjectName = (project.name || "Prosjekt").replace(/[^a-zA-Z0-9]/g, '_');
+            const filename = `SJA-${safeProjectName}-${new Date().toISOString().split('T')[0]}.pdf`;
+            const file = new File([pdfBlob], filename, { type: 'application/pdf' });
+
+            // 2. Try native sharing (Works best on Mobile/iPhone)
+            if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                await navigator.share({
+                    title: `Signert SJA: ${sja.workOperation}`,
+                    text: `Signert SJA for ${project.address}`,
+                    files: [file]
+                });
+                return;
+            }
+
+            // 3. Fallback for Desktop (Download + Mailto)
+            pdf.save(filename);
+            const subject = encodeURIComponent(`Signert SJA: ${sja.workOperation || "SJA"} - ${project.address}`);
+            const body = encodeURIComponent(`Hei,\n\nVedlagt ligger signert SJA for arbeid på ${project.address}.\n\nArbeidsoperasjon: ${sja.workOperation || "SJA"}\nDato: ${new Date().toLocaleDateString()}\n\nMvh,\n${sja.signatureLeader?.replace("Signert av ", "") || ""}`);
+
+            window.location.href = `mailto:?subject=${subject}&body=${body}`;
+
+            alert("PDF er lastet ned. E-postklient åpnes. Vennligst legg ved filen manuelt.");
+
+        } catch (error) {
+            console.error("Sharing failed", error);
+            alert("Kunne ikke dele dokumentet.");
+        }
     };
 
     if (loading) return <div className="container" style={{ paddingTop: "2rem" }}>Laster...</div>;
