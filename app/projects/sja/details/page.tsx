@@ -5,7 +5,9 @@ import { Project, SJA, SJARisk, SJAMeasure } from "@/lib/types";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useEffect, useState, Suspense } from "react";
 import Link from "next/link";
-import { ArrowLeft, Plus, Save, Trash2, CheckCircle, AlertTriangle } from "lucide-react";
+import { ArrowLeft, Plus, Save, Trash2, CheckCircle, AlertTriangle, Download, Mail } from "lucide-react";
+import jsPDF from "jspdf";
+import html2canvas from "html2canvas";
 
 function RiskItem({ risk, onChange, onDelete, readOnly }: { risk: SJARisk, onChange: (r: SJARisk) => void, onDelete: () => void, readOnly: boolean }) {
     const addMeasure = () => {
@@ -206,6 +208,42 @@ function SJADetailContent() {
         setSja({ ...sja, risks: [...sja.risks, newRisk] });
     };
 
+    const handleDownloadPDF = async () => {
+        const input = document.getElementById('sja-content');
+        if (!input) return;
+
+        try {
+            const canvas = await html2canvas(input, { scale: 2 } as any);
+            const imgData = canvas.toDataURL('image/png');
+            const pdf = new jsPDF('p', 'mm', 'a4');
+            const pdfWidth = pdf.internal.pageSize.getWidth();
+            const imgWidth = canvas.width;
+            const imgHeight = canvas.height;
+            const ratio = pdfWidth / imgWidth;
+            const contentHeight = imgHeight * ratio;
+
+            pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, contentHeight);
+            pdf.save(`SJA-${project?.name || "Prosjekt"}-${new Date().toISOString().split('T')[0]}.pdf`);
+        } catch (error) {
+            console.error("PDF Generation failed", error);
+            alert("Kunne ikke generere PDF.");
+        }
+    };
+
+    const handleSendEmail = async () => {
+        if (!sja || !project) return;
+
+        // Trigger download so user has file to attach
+        await handleDownloadPDF();
+
+        const subject = encodeURIComponent(`Signert SJA: ${sja.workOperation || "SJA"} - ${project.address}`);
+        const body = encodeURIComponent(`Hei,\n\nVedlagt ligger signert SJA for arbeid på ${project.address}.\n\nArbeidsoperasjon: ${sja.workOperation || "SJA"}\nDato: ${new Date().toLocaleDateString()}\n\nMvh,\n${sja.signatureLeader?.replace("Signert av ", "") || ""}`);
+
+        window.location.href = `mailto:?subject=${subject}&body=${body}`;
+
+        alert("PDF er lastet ned. E-postklient åpnes. Vennligst legg ved filen manuelt.");
+    };
+
     if (loading) return <div className="container" style={{ paddingTop: "2rem" }}>Laster...</div>;
     if (!project || !sja) return <div className="container" style={{ paddingTop: "2rem" }}>Fant ikke SJA</div>;
 
@@ -224,81 +262,92 @@ function SJADetailContent() {
                 )}
             </div>
 
-            <div className="flex-between" style={{ alignItems: "flex-start", marginBottom: "2rem" }}>
-                <div>
-                    <h1 style={{ marginBottom: "0.5rem" }}>SJA: {sja.workOperation || sja.description || "Uten navn"}</h1>
-                    <div style={{ display: "grid", gap: "0.5rem", color: "var(--muted-foreground)" }}>
-                        <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
-                            <strong>Sted:</strong> {sja.location}
-                        </div>
-                        {sja.weather && (
+            <div id="sja-content" style={{ padding: "1rem", backgroundColor: "white" }}>
+                <div className="flex-between" style={{ alignItems: "flex-start", marginBottom: "2rem" }}>
+                    <div>
+                        <h1 style={{ marginBottom: "0.5rem" }}>SJA: {sja.workOperation || sja.description || "Uten navn"}</h1>
+                        <div style={{ display: "grid", gap: "0.5rem", color: "var(--muted-foreground)" }}>
                             <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
-                                <strong>Værforhold:</strong> {sja.weather}
+                                <strong>Sted:</strong> {sja.location}
                             </div>
-                        )}
-                        <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
-                            <strong>Deltakere:</strong> {sja.participants}
+                            {sja.weather && (
+                                <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+                                    <strong>Værforhold:</strong> {sja.weather}
+                                </div>
+                            )}
+                            <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+                                <strong>Deltakere:</strong> {sja.participants}
+                            </div>
+                            {sja.emergencyResponse && (
+                                <div style={{ display: "flex", gap: "0.5rem", alignItems: "center", color: "var(--destructive)" }}>
+                                    <strong>Beredskap:</strong> {sja.emergencyResponse}
+                                </div>
+                            )}
                         </div>
-                        {sja.emergencyResponse && (
-                            <div style={{ display: "flex", gap: "0.5rem", alignItems: "center", color: "var(--destructive)" }}>
-                                <strong>Beredskap:</strong> {sja.emergencyResponse}
-                            </div>
-                        )}
                     </div>
-                </div>
-                {!isSigned && (
-                    <div style={{ display: "flex", gap: "1rem" }}>
-                        <button className="btn btn-secondary" onClick={() => handleSave(false)} disabled={saving}>
-                            <Save size={16} style={{ marginRight: "0.5rem" }} /> {saving ? "Lagrer..." : "Lagre kladd"}
-                        </button>
-                        <button className="btn btn-primary" onClick={() => handleSave(true)} disabled={saving}>
-                            Signer SJA
-                        </button>
-                    </div>
-                )}
-            </div>
-
-            <div style={{ marginBottom: "2rem" }}>
-                <div className="flex-between" style={{ marginBottom: "1rem" }}>
-                    <h2>Risikomomenter</h2>
-                    {!isSigned && (
-                        <button className="btn btn-outline" onClick={addRisk}>
-                            <Plus size={16} style={{ marginRight: "0.5rem" }} /> Legg til risiko
-                        </button>
+                    {!isSigned ? (
+                        <div style={{ display: "flex", gap: "1rem" }}>
+                            <button className="btn btn-secondary" onClick={() => handleSave(false)} disabled={saving}>
+                                <Save size={16} style={{ marginRight: "0.5rem" }} /> {saving ? "Lagrer..." : "Lagre kladd"}
+                            </button>
+                            <button className="btn btn-primary" onClick={() => handleSave(true)} disabled={saving}>
+                                Signer SJA
+                            </button>
+                        </div>
+                    ) : (
+                        <div style={{ display: "flex", gap: "1rem" }}>
+                            <button className="btn btn-outline" onClick={handleDownloadPDF}>
+                                <Download size={16} style={{ marginRight: "0.5rem" }} /> PDF
+                            </button>
+                            <button className="btn btn-primary" onClick={handleSendEmail}>
+                                <Mail size={16} style={{ marginRight: "0.5rem" }} /> Send på E-post
+                            </button>
+                        </div>
                     )}
                 </div>
 
-                {sja.risks.length === 0 && (
-                    <div className="card" style={{ textAlign: "center", padding: "2rem", fontStyle: "italic", color: "var(--muted-foreground)" }}>
-                        Ingen risikomomenter lagt til enda.
+                <div style={{ marginBottom: "2rem" }}>
+                    <div className="flex-between" style={{ marginBottom: "1rem" }}>
+                        <h2>Risikomomenter</h2>
+                        {!isSigned && (
+                            <button className="btn btn-outline" onClick={addRisk}>
+                                <Plus size={16} style={{ marginRight: "0.5rem" }} /> Legg til risiko
+                            </button>
+                        )}
+                    </div>
+
+                    {sja.risks.length === 0 && (
+                        <div className="card" style={{ textAlign: "center", padding: "2rem", fontStyle: "italic", color: "var(--muted-foreground)" }}>
+                            Ingen risikomomenter lagt til enda.
+                        </div>
+                    )}
+
+                    {sja.risks.map((risk, index) => (
+                        <RiskItem
+                            key={risk.id}
+                            risk={risk}
+                            readOnly={isSigned}
+                            onChange={(updatedRisk) => {
+                                const newRisks = [...sja.risks];
+                                newRisks[index] = updatedRisk;
+                                setSja({ ...sja, risks: newRisks });
+                            }}
+                            onDelete={() => {
+                                const newRisks = sja.risks.filter((_, i) => i !== index);
+                                setSja({ ...sja, risks: newRisks });
+                            }}
+                        />
+                    ))}
+                </div>
+
+                {isSigned && (
+                    <div style={{ marginTop: "2rem", borderTop: "1px solid var(--border)", paddingTop: "1rem" }}>
+                        <h3>Signatur</h3>
+                        <p>Signert av: {sja.signatureLeader}</p>
+                        <p>Dato: {new Date(sja.signatureLeaderDate!).toLocaleString()}</p>
                     </div>
                 )}
-
-                {sja.risks.map((risk, index) => (
-                    <RiskItem
-                        key={risk.id}
-                        risk={risk}
-                        readOnly={isSigned}
-                        onChange={(updatedRisk) => {
-                            const newRisks = [...sja.risks];
-                            newRisks[index] = updatedRisk;
-                            setSja({ ...sja, risks: newRisks });
-                        }}
-                        onDelete={() => {
-                            const newRisks = sja.risks.filter((_, i) => i !== index);
-                            setSja({ ...sja, risks: newRisks });
-                        }}
-                    />
-                ))}
             </div>
-
-            {isSigned && (
-                <div style={{ marginTop: "2rem", borderTop: "1px solid var(--border)", paddingTop: "1rem" }}>
-                    <h3>Signatur</h3>
-                    <p>Signert av: {sja.signatureLeader}</p>
-                    <p>Dato: {new Date(sja.signatureLeaderDate!).toLocaleString()}</p>
-                </div>
-            )}
         </main>
     );
 }
