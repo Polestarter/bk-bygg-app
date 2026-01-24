@@ -74,8 +74,10 @@ function ProjectDetailsContent() {
     }
 
     const totalTimeCost = (project.timeEntries || []).reduce((sum, t) => sum + (t.hours * t.hourlyRate), 0);
-    const profit = project.budgetExVAT - project.spentExVAT - totalTimeCost;
-    const profitMargin = project.budgetExVAT > 0 ? (profit / project.budgetExVAT) * 100 : 0;
+    const totalExtras = (project.extras || []).reduce((sum, e) => sum + e.amount, 0);
+    const totalRevenue = project.budgetExVAT + totalExtras;
+    const profit = totalRevenue - project.spentExVAT - totalTimeCost;
+    const profitMargin = totalRevenue > 0 ? (profit / totalRevenue) * 100 : 0;
 
     const refreshProject = async () => {
         if (!id) return;
@@ -139,10 +141,10 @@ function ProjectDetailsContent() {
                 <div className="card">
                     <div className="flex-between" style={{ marginBottom: "0.5rem" }}>
                         <span style={{ fontSize: "0.875rem", color: "var(--muted-foreground)" }}>Budsjett brukt</span>
-                        <span style={{ fontWeight: "600" }}>{Math.round((project.spentExVAT / project.budgetExVAT) * 100)}%</span>
+                        <span style={{ fontWeight: "600" }}>{Math.round((project.spentExVAT / totalRevenue) * 100)}%</span>
                     </div>
                     <div style={{ width: "100%", height: "8px", backgroundColor: "var(--secondary)", borderRadius: "99px", overflow: "hidden" }}>
-                        <div style={{ width: `${Math.min(100, (project.spentExVAT / project.budgetExVAT) * 100)}%`, height: "100%", backgroundColor: "var(--primary)", borderRadius: "99px" }}></div>
+                        <div style={{ width: `${Math.min(100, (project.spentExVAT / totalRevenue) * 100)}%`, height: "100%", backgroundColor: "var(--primary)", borderRadius: "99px" }}></div>
                     </div>
                 </div>
 
@@ -156,6 +158,12 @@ function ProjectDetailsContent() {
                             <span>Avtalt Pris (eks. mva)</span>
                             <span style={{ fontWeight: "600" }}>{(project.budgetExVAT).toLocaleString()} kr</span>
                         </div>
+                        {totalExtras > 0 && (
+                            <div className="flex-between" style={{ color: "#10b981" }}>
+                                <span>+ Uforutsette Tillegg</span>
+                                <span>+ {totalExtras.toLocaleString()} kr</span>
+                            </div>
+                        )}
                         <div className="flex-between" style={{ color: "var(--destructive)" }}>
                             <span>- Utgifter (Varer/Mat)</span>
                             <span>- {(project.spentExVAT).toLocaleString()} kr</span>
@@ -177,7 +185,7 @@ function ProjectDetailsContent() {
                         </Link>
 
                         <p style={{ fontSize: "0.75rem", color: "var(--muted-foreground)", marginTop: "0.5rem", textAlign: "right" }}>
-                            Inkl. mva: {(project.budgetExVAT * 1.25).toLocaleString()} kr
+                            Inkl. mva: {(totalRevenue * 1.25).toLocaleString()} kr
                         </p>
                     </div>
                 </div>
