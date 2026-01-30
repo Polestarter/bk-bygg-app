@@ -4,7 +4,7 @@
 import { getProjects, getCustomer, getChecklistTemplates, getChecklists, deleteProject } from "@/lib/db";
 import { Project, Customer, ChecklistTemplate, Checklist } from "@/lib/types";
 import Link from "next/link";
-import { ArrowLeft, CheckSquare, Clock, Banknote, Calendar, Building2, MapPin, Edit, Trash2, ShieldCheck, ClipboardCheck } from "lucide-react";
+import { ArrowLeft, CheckSquare, Clock, Banknote, Calendar, Building2, MapPin, Edit, Trash2, ShieldCheck, ClipboardCheck, AlertTriangle } from "lucide-react";
 import DocumentList from "./DocumentList";
 import EconomyDetails from "./EconomyDetails";
 import TimeTracking from "./TimeTracking";
@@ -272,6 +272,24 @@ function ProjectDetailsContent() {
                                 <h3 style={{ fontSize: "1.1rem", margin: 0, marginBottom: "0.25rem" }}>Vernerunder</h3>
                                 <p style={{ margin: 0, color: "var(--muted-foreground)", fontSize: "0.875rem" }}>
                                     Inspeksjon, avvikshåndtering og bilder
+                                </p>
+                            </div>
+                        </div>
+                    </Link>
+
+                    <Link href={`/projects/deviations?projectId=${project.id}`} style={{ textDecoration: "none" }}>
+                        <div className="card hover-effect" style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
+                            <div style={{
+                                width: "48px", height: "48px", borderRadius: "12px",
+                                backgroundColor: "rgba(249, 115, 22, 0.1)", display: "flex", // Orange tint
+                                alignItems: "center", justifyContent: "center"
+                            }}>
+                                <AlertTriangle size={24} color="#f97316" />
+                            </div>
+                            <div>
+                                <h3 style={{ fontSize: "1.1rem", margin: 0, marginBottom: "0.25rem" }}>Avvik</h3>
+                                <p style={{ margin: 0, color: "var(--muted-foreground)", fontSize: "0.875rem" }}>
+                                    Registrer uønskede hendelser
                                 </p>
                             </div>
                         </div>

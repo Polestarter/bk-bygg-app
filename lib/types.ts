@@ -205,3 +205,42 @@ export interface SJATemplate {
     name: string;
     risks: Omit<SJARisk, "id">[];
 }
+
+// Deviations (Avvik)
+export type DeviationSeverity = "Lav" | "Middels" | "Høy" | "Kritisk";
+export type DeviationStatus = "Ny" | "Pågår" | "Utbedret" | "Lukket";
+
+export interface DeviationAction {
+    id: string;
+    deviationId: string;
+    description: string;
+    completed: boolean;
+    completedBy?: string;
+    completedAt?: string;
+    createdAt: string;
+}
+
+export interface Deviation {
+    id: string;
+    projectId: string; // Can be empty string if general
+    sjaId?: string; // Optional link to SJA
+    userId?: string;
+    title: string;
+    description: string;
+    category: string;
+    severity: DeviationSeverity;
+    status: DeviationStatus;
+    location?: {
+        text: string;
+        lat?: number;
+        lng?: number;
+    };
+    responsiblePerson?: string;
+    dueDate?: string;
+    photos: string[]; // Base64 or URLs
+    createdAt: string;
+    updatedAt: string;
+    closedAt?: string;
+    closedBy?: string;
+    actions?: DeviationAction[]; // Joined view
+}

@@ -1,6 +1,6 @@
 
 import { supabase } from "./supabaseClient";
-import { Project, Customer, Checklist, ChecklistTemplate, Offer, SJA, SJATemplate, SafetyRound } from "./types";
+import { Project, Customer, Checklist, ChecklistTemplate, Offer, SJA, SJATemplate, SafetyRound, Deviation, DeviationAction } from "./types";
 
 // Helper to strip "undefined" fields because Supabase/JSON doesn't like them?
 // Actually Supabase JS handles it, but undefined is not valid JSON.
@@ -169,17 +169,61 @@ export async function getSafetyRounds(projectId: string): Promise<SafetyRound[]>
 }
 
 export async function getSafetyRound(id: string): Promise<SafetyRound | undefined> {
-    const { data } = await supabase.from('safety_rounds').select('*').eq('id', id).single();
-    if (!data) return undefined;
-    return data as SafetyRound;
+    const { data } = await supabase.from("safety_rounds").select("*").eq("id", id).single();
+    return data || undefined;
 }
 
-export async function addSafetyRound(round: SafetyRound): Promise<void> {
-    const { error } = await supabase.from('safety_rounds').insert(clean(round));
-    if (error) console.error("Error adding Safety Round:", error);
+export async function addSafetyRound(round: Omit<SafetyRound, "id">): Promise<SafetyRound> {
+    const { data, error } = await supabase.from("safety_rounds").insert([round]).select().single();
+    if (error) throw error;
+    return data;
 }
 
-export async function updateSafetyRound(round: SafetyRound): Promise<void> {
-    const { error } = await supabase.from('safety_rounds').update(clean(round)).eq('id', round.id);
-    if (error) console.error("Error updating Safety Round:", error);
+export async function updateSafetyRound(id: string, updates: Partial<SafetyRound>): Promise<void> {
+    const { error } = await supabase.from("safety_rounds").update(updates).eq("id", id);
+    if (error) throw error;
+}
+
+// Deviations
+export async function getDeviations(projectId?: string): Promise<Deviation[]> {
+    let query = supabase.from("deviations").select("*, actions:deviation_actions(*)");
+    if (projectId) {
+        query = query.eq("project_id", projectId);
+    }
+    const { data, error } = await query.order("created_at", { ascending: false });
+    if (error) throw error;
+    return data || [];
+}
+
+export async function getDeviation(id: string): Promise<Deviation | undefined> {
+    const { data, error } = await supabase.from("deviations").select("*, actions:deviation_actions(*)").eq("id", id).single();
+    if (error) return undefined;
+    return data;
+}
+
+export async function addDeviation(deviation: Omit<Deviation, "id" | "createdAt" | "updatedAt" | "actions">): Promise<Deviation> {
+    const { data, error } = await supabase.from("deviations").insert([deviation]).select().single();
+    if (error) throw error;
+    return data;
+}
+
+export async function updateDeviation(id: string, updates: Partial<Deviation>): Promise<void> {
+    const { error } = await supabase.from("deviations").update({ ...updates, updated_at: new Date().toISOString() }).eq("id", id);
+    if (error) throw error;
+}
+
+export async function addDeviationAction(deviationId: string, description: string): Promise<DeviationAction> {
+    const { data, error } = await supabase.from("deviation_actions").insert([{ deviation_id: deviationId, description }]).select().single();
+    if (error) throw error;
+    return data;
+}
+
+export async function toggleDeviationAction(actionId: string, completed: boolean, user: string): Promise<void> {
+    const updates = {
+        completed,
+        completed_by: completed ? user : null,
+        completed_at: completed ? new Date().toISOString() : null
+    };
+    const { error } = await supabase.from("deviation_actions").update(updates).eq("id", actionId);
+    if (error) throw error;
 }
