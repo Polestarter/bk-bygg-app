@@ -1,4 +1,4 @@
-import { getProjects as dbGetProjects, getCustomers as dbGetCustomers, getChecklists as dbGetChecklists, getChecklistTemplates as dbGetChecklistTemplates, getSJAs as dbGetSJAs, getSJATemplates as dbGetSJATemplates, addSJA as dbAddSJA, getSJA as dbGetSJA, updateSJA as dbUpdateSJA } from "./db";
+import { getProjects as dbGetProjects, getCustomers as dbGetCustomers, getChecklists as dbGetChecklists, getChecklistTemplates as dbGetChecklistTemplates, getSJAs as dbGetSJAs, getSJATemplates as dbGetSJATemplates, addSJA as dbAddSJA, getSJA as dbGetSJA, updateSJA as dbUpdateSJA, getSafetyRounds as dbGetSafetyRounds, getSafetyRound as dbGetSafetyRound, addSafetyRound as dbAddSafetyRound, updateSafetyRound as dbUpdateSafetyRound } from "./db";
 import { Project, Customer, Checklist, SJA } from "./types";
 
 // Re-export types for convenience
@@ -64,4 +64,20 @@ export async function addSJA(sja: SJA) {
 
 export async function updateSJA(sja: SJA) {
     return await dbUpdateSJA(sja);
+}
+
+export async function getSafetyRounds(projectId: string) {
+    return await dbGetSafetyRounds(projectId);
+}
+
+export async function getSafetyRound(id: string) {
+    return await dbGetSafetyRound(id);
+}
+
+export async function addSafetyRound(round: any) {
+    return await dbAddSafetyRound(round);
+}
+
+export async function updateSafetyRound(round: any) {
+    return await dbUpdateSafetyRound(round);
 }

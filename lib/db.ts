@@ -1,6 +1,6 @@
 
 import { supabase } from "./supabaseClient";
-import { Project, Customer, Checklist, ChecklistTemplate, Offer, SJA, SJATemplate } from "./types";
+import { Project, Customer, Checklist, ChecklistTemplate, Offer, SJA, SJATemplate, SafetyRound } from "./types";
 
 // Helper to strip "undefined" fields because Supabase/JSON doesn't like them?
 // Actually Supabase JS handles it, but undefined is not valid JSON.
@@ -161,4 +161,25 @@ export async function updateSJA(sja: SJA): Promise<void> {
 export async function deleteSJA(id: string): Promise<void> {
     const { error } = await supabase.from('sjas').delete().eq('id', id);
     if (error) console.error("Error deleting SJA:", error);
+}
+
+export async function getSafetyRounds(projectId: string): Promise<SafetyRound[]> {
+    const { data } = await supabase.from('safety_rounds').select('*').eq('projectId', projectId);
+    return (data as SafetyRound[]) || [];
+}
+
+export async function getSafetyRound(id: string): Promise<SafetyRound | undefined> {
+    const { data } = await supabase.from('safety_rounds').select('*').eq('id', id).single();
+    if (!data) return undefined;
+    return data as SafetyRound;
+}
+
+export async function addSafetyRound(round: SafetyRound): Promise<void> {
+    const { error } = await supabase.from('safety_rounds').insert(clean(round));
+    if (error) console.error("Error adding Safety Round:", error);
+}
+
+export async function updateSafetyRound(round: SafetyRound): Promise<void> {
+    const { error } = await supabase.from('safety_rounds').update(clean(round)).eq('id', round.id);
+    if (error) console.error("Error updating Safety Round:", error);
 }

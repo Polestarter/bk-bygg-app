@@ -4,7 +4,7 @@
 import { getProjects, getCustomer, getChecklistTemplates, getChecklists, deleteProject } from "@/lib/db";
 import { Project, Customer, ChecklistTemplate, Checklist } from "@/lib/types";
 import Link from "next/link";
-import { ArrowLeft, CheckSquare, Clock, Banknote, Calendar, Building2, MapPin, Edit, Trash2, ShieldCheck } from "lucide-react";
+import { ArrowLeft, CheckSquare, Clock, Banknote, Calendar, Building2, MapPin, Edit, Trash2, ShieldCheck, ClipboardCheck } from "lucide-react";
 import DocumentList from "./DocumentList";
 import EconomyDetails from "./EconomyDetails";
 import TimeTracking from "./TimeTracking";
@@ -240,23 +240,43 @@ function ProjectDetailsContent() {
                 <div className="flex-between" style={{ marginBottom: "1rem" }}>
                     <h2>HMS & Sikkerhet</h2>
                 </div>
-                <Link href={`/projects/sja?projectId=${project.id}`} style={{ textDecoration: "none" }}>
-                    <div className="card" style={{ display: "flex", alignItems: "center", gap: "1rem", transition: "border-color 0.2s" }}>
-                        <div style={{
-                            width: "48px", height: "48px", borderRadius: "12px",
-                            backgroundColor: "rgba(16, 185, 129, 0.1)", display: "flex",
-                            alignItems: "center", justifyContent: "center"
-                        }}>
-                            <ShieldCheck size={24} color="#10b981" />
+                <div style={{ display: "grid", gap: "1rem", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))" }}>
+                    <Link href={`/projects/sja?projectId=${project.id}`} style={{ textDecoration: "none" }}>
+                        <div className="card hover-effect" style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
+                            <div style={{
+                                width: "48px", height: "48px", borderRadius: "12px",
+                                backgroundColor: "rgba(16, 185, 129, 0.1)", display: "flex",
+                                alignItems: "center", justifyContent: "center"
+                            }}>
+                                <ShieldCheck size={24} color="#10b981" />
+                            </div>
+                            <div>
+                                <h3 style={{ fontSize: "1.1rem", margin: 0, marginBottom: "0.25rem" }}>Sikker Jobb Analyse (SJA)</h3>
+                                <p style={{ margin: 0, color: "var(--muted-foreground)", fontSize: "0.875rem" }}>
+                                    Risikovurdering, tiltak og signering
+                                </p>
+                            </div>
                         </div>
-                        <div>
-                            <h3 style={{ fontSize: "1.1rem", margin: 0, marginBottom: "0.25rem" }}>Sikker Jobb Analyse (SJA)</h3>
-                            <p style={{ margin: 0, color: "var(--muted-foreground)", fontSize: "0.875rem" }}>
-                                Risikovurdering, tiltak og signering
-                            </p>
+                    </Link>
+
+                    <Link href={`/projects/safety-rounds?projectId=${project.id}`} style={{ textDecoration: "none" }}>
+                        <div className="card hover-effect" style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
+                            <div style={{
+                                width: "48px", height: "48px", borderRadius: "12px",
+                                backgroundColor: "rgba(59, 130, 246, 0.1)", display: "flex", // Blue tint
+                                alignItems: "center", justifyContent: "center"
+                            }}>
+                                <ClipboardCheck size={24} color="#3b82f6" />
+                            </div>
+                            <div>
+                                <h3 style={{ fontSize: "1.1rem", margin: 0, marginBottom: "0.25rem" }}>Vernerunder</h3>
+                                <p style={{ margin: 0, color: "var(--muted-foreground)", fontSize: "0.875rem" }}>
+                                    Inspeksjon, avvikshåndtering og bilder
+                                </p>
+                            </div>
                         </div>
-                    </div>
-                </Link>
+                    </Link>
+                </div>
             </div>
 
             <TimeTracking project={project} onUpdate={refreshProject} />

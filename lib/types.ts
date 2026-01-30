@@ -178,6 +178,28 @@ export interface SJA {
     emergencyResponse?: string; // Beredskap
 }
 
+// Safety Rounds (Vernerunder)
+export interface SafetyRoundItem {
+    id: string;
+    category: string;
+    question: string;
+    status: "OK" | "Avvik" | "Ikke relevant";
+    comment?: string;
+    photoUrl?: string; // Base64
+}
+
+export interface SafetyRound {
+    id: string;
+    projectId: string; // UUID
+    date: string;
+    description: string;
+    participants: string;
+    status: "Utkast" | "Signert";
+    items: SafetyRoundItem[];
+    signatureLeader?: string;
+    signatureLeaderDate?: string;
+}
+
 export interface SJATemplate {
     id: string;
     name: string;
