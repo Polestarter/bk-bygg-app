@@ -3,7 +3,7 @@
 import { useEffect, useState, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { ArrowLeft, FileText, Upload, Folder, Shield, Download, Eye, QrCode, X } from "lucide-react";
+import { ArrowLeft, FileText, Upload, Folder, Shield, Download, Eye, QrCode, X, Trash2 } from "lucide-react";
 import { getProjects, getProjectDocuments, addProjectDocument } from "@/lib/data"; // Need to implement these
 import { Project, ProjectDocument } from "@/lib/types";
 
@@ -270,7 +270,13 @@ function ProjectHMSContent() {
                     ) : (
                         <div style={{ display: "grid", gap: "1rem" }}>
                             {filteredDocs.map(doc => (
-                                <ProjectDocumentItem key={doc.id} doc={doc} />
+                                <ProjectDocumentItem
+                                    key={doc.id}
+                                    doc={doc}
+                                    onDelete={(id) => {
+                                        setDocuments(documents.filter(d => d.id !== id));
+                                    }}
+                                />
                             ))}
                         </div>
                     )}
@@ -319,8 +325,9 @@ function ProjectHMSContent() {
     );
 }
 
-function ProjectDocumentItem({ doc }: { doc: ProjectDocument }) {
+function ProjectDocumentItem({ doc, onDelete }: { doc: ProjectDocument, onDelete: (id: string) => void }) {
     const [loading, setLoading] = useState(false);
+    const [deleting, setDeleting] = useState(false);
 
     const handleView = async () => {
         setLoading(true);
@@ -347,6 +354,20 @@ function ProjectDocumentItem({ doc }: { doc: ProjectDocument }) {
         }
     };
 
+    const handleDelete = async () => {
+        if (!window.confirm("Er du sikker på at du vil slette dette dokumentet?")) return;
+        setDeleting(true);
+        try {
+            const { deleteProjectDocument } = await import("@/lib/data");
+            await deleteProjectDocument(doc.id);
+            onDelete(doc.id);
+        } catch (error) {
+            console.error(error);
+            alert("Kunne ikke slette dokumentet.");
+            setDeleting(false);
+        }
+    };
+
     return (
         <div className="card" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <div style={{ display: "flex", alignItems: "center", gap: "1rem", overflow: "hidden" }}>
@@ -358,14 +379,25 @@ function ProjectDocumentItem({ doc }: { doc: ProjectDocument }) {
                     </p>
                 </div>
             </div>
-            <button
-                onClick={handleView}
-                className="btn-icon"
-                disabled={loading}
-                title="Vis dokument"
-            >
-                {loading ? <span className="loading loading-spinner loading-xs">...</span> : <Eye size={20} />}
-            </button>
+            <div style={{ display: "flex", gap: "0.5rem" }}>
+                <button
+                    onClick={handleView}
+                    className="btn-icon"
+                    disabled={loading || deleting}
+                    title="Vis dokument"
+                >
+                    {loading ? <span className="loading loading-spinner loading-xs">...</span> : <Eye size={20} />}
+                </button>
+                <button
+                    onClick={handleDelete}
+                    className="btn-icon"
+                    disabled={loading || deleting}
+                    title="Slett dokument"
+                    style={{ color: "var(--destructive)" }}
+                >
+                    {deleting ? <span className="loading loading-spinner loading-xs">...</span> : <Trash2 size={20} />}
+                </button>
+            </div>
         </div>
     );
 }

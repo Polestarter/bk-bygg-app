@@ -307,6 +307,11 @@ export async function addProjectDocument(doc: Omit<ProjectDocument, "id" | "uplo
     };
 }
 
+export async function deleteProjectDocument(id: string): Promise<void> {
+    const { error } = await supabase.from("project_documents").delete().eq("id", id);
+    if (error) throw error;
+}
+
 // Share Tokens (QR)
 export async function createShareToken(projectId: string): Promise<string> {
     // Check if valid token exists

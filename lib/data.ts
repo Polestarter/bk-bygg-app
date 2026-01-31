@@ -1,4 +1,4 @@
-import { getProjects as dbGetProjects, getCustomers as dbGetCustomers, getChecklists as dbGetChecklists, getChecklistTemplates as dbGetChecklistTemplates, getSJAs as dbGetSJAs, getSJATemplates as dbGetSJATemplates, addSJA as dbAddSJA, getSJA as dbGetSJA, updateSJA as dbUpdateSJA, getSafetyRounds as dbGetSafetyRounds, getSafetyRound as dbGetSafetyRound, addSafetyRound as dbAddSafetyRound, updateSafetyRound as dbUpdateSafetyRound, getDeviations as dbGetDeviations, getDeviation as dbGetDeviation, addDeviation as dbAddDeviation, updateDeviation as dbUpdateDeviation, addDeviationAction as dbAddDeviationAction, toggleDeviationAction as dbToggleDeviationAction, getHMSHandbookSections as dbGetHMSHandbookSections, updateHMSHandbookSection as dbUpdateHMSHandbookSection, getProjectDocuments as dbGetProjectDocuments, addProjectDocument as dbAddProjectDocument, createShareToken as dbCreateShareToken, getProjectByShareToken as dbGetProjectByShareToken } from "./db";
+import { getProjects as dbGetProjects, getCustomers as dbGetCustomers, getChecklists as dbGetChecklists, getChecklistTemplates as dbGetChecklistTemplates, getSJAs as dbGetSJAs, getSJATemplates as dbGetSJATemplates, addSJA as dbAddSJA, getSJA as dbGetSJA, updateSJA as dbUpdateSJA, getSafetyRounds as dbGetSafetyRounds, getSafetyRound as dbGetSafetyRound, addSafetyRound as dbAddSafetyRound, updateSafetyRound as dbUpdateSafetyRound, getDeviations as dbGetDeviations, getDeviation as dbGetDeviation, addDeviation as dbAddDeviation, updateDeviation as dbUpdateDeviation, addDeviationAction as dbAddDeviationAction, toggleDeviationAction as dbToggleDeviationAction, getHMSHandbookSections as dbGetHMSHandbookSections, updateHMSHandbookSection as dbUpdateHMSHandbookSection, getProjectDocuments as dbGetProjectDocuments, addProjectDocument as dbAddProjectDocument, deleteProjectDocument as dbDeleteProjectDocument, createShareToken as dbCreateShareToken, getProjectByShareToken as dbGetProjectByShareToken } from "./db";
 import { Project, Customer, Checklist, SJA, Deviation } from "./types";
 
 // Re-export types for convenience
@@ -122,6 +122,10 @@ export async function getProjectDocuments(projectId: string) {
 
 export async function addProjectDocument(doc: any) {
     return await dbAddProjectDocument(doc);
+}
+
+export async function deleteProjectDocument(id: string) {
+    return await dbDeleteProjectDocument(id);
 }
 
 export async function createShareToken(projectId: string) {
