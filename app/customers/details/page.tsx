@@ -1,8 +1,8 @@
 "use client";
 
 
-import { getCustomer, getCustomerProjects, deleteCustomer } from "@/lib/db";
-import { Project, Customer } from "@/lib/types";
+import { getCustomer, getCustomerProjects, deleteCustomer, getUsers } from "@/lib/data";
+import { Project, Customer, User } from "@/lib/types";
 import Link from "next/link";
 import { ArrowLeft, Phone, Mail, MapPin, Building2, Banknote, Edit, Trash2, Plus } from "lucide-react";
 import { useSearchParams, useRouter } from "next/navigation";
@@ -16,15 +16,19 @@ function CustomerDetailsContent() {
     const [customer, setCustomer] = useState<Customer | undefined>(undefined);
     const [projects, setProjects] = useState<Project[]>([]);
     const [loading, setLoading] = useState(true);
+    const [currentUser, setCurrentUser] = useState<User | undefined>(undefined);
 
     useEffect(() => {
         if (id) {
             Promise.all([
                 getCustomer(id),
-                getCustomerProjects(id)
-            ]).then(([cust, projs]) => {
+                getCustomerProjects(id),
+                getUsers()
+            ]).then(([cust, projs, users]) => {
                 setCustomer(cust);
                 setProjects(projs);
+                const admin = users.find(u => u.role === "admin");
+                if (admin) setCurrentUser(admin);
                 setLoading(false);
             });
         } else {
@@ -35,7 +39,8 @@ function CustomerDetailsContent() {
     const handleDelete = async () => {
         if (!customer) return;
         if (confirm("Er du sikker på at du vil slette denne kunden? Dette kan ikke angres.")) {
-            await deleteCustomer(customer.id);
+            const userId = currentUser?.id || "unknown";
+            await deleteCustomer(customer.id, userId);
             router.push("/customers");
             router.refresh();
         }

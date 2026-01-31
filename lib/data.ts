@@ -1,4 +1,4 @@
-import { getProjects as dbGetProjects, getCustomers as dbGetCustomers, getChecklists as dbGetChecklists, getChecklistTemplates as dbGetChecklistTemplates, getSJAs as dbGetSJAs, getSJATemplates as dbGetSJATemplates, addSJA as dbAddSJA, getSJA as dbGetSJA, updateSJA as dbUpdateSJA, getSafetyRounds as dbGetSafetyRounds, getSafetyRound as dbGetSafetyRound, addSafetyRound as dbAddSafetyRound, updateSafetyRound as dbUpdateSafetyRound, getDeviations as dbGetDeviations, getDeviation as dbGetDeviation, addDeviation as dbAddDeviation, updateDeviation as dbUpdateDeviation, addDeviationAction as dbAddDeviationAction, toggleDeviationAction as dbToggleDeviationAction, getHMSHandbookSections as dbGetHMSHandbookSections, updateHMSHandbookSection as dbUpdateHMSHandbookSection, getProjectDocuments as dbGetProjectDocuments, addProjectDocument as dbAddProjectDocument, deleteProjectDocument as dbDeleteProjectDocument, createShareToken as dbCreateShareToken, getProjectByShareToken as dbGetProjectByShareToken } from "./db";
+import { getProjects as dbGetProjects, getCustomers as dbGetCustomers, getChecklists as dbGetChecklists, getChecklistTemplates as dbGetChecklistTemplates, getSJAs as dbGetSJAs, getSJATemplates as dbGetSJATemplates, addSJA as dbAddSJA, getSJA as dbGetSJA, updateSJA as dbUpdateSJA, getSafetyRounds as dbGetSafetyRounds, getSafetyRound as dbGetSafetyRound, addSafetyRound as dbAddSafetyRound, updateSafetyRound as dbUpdateSafetyRound, getDeviations as dbGetDeviations, getDeviation as dbGetDeviation, addDeviation as dbAddDeviation, updateDeviation as dbUpdateDeviation, addDeviationAction as dbAddDeviationAction, toggleDeviationAction as dbToggleDeviationAction, getHMSHandbookSections as dbGetHMSHandbookSections, updateHMSHandbookSection as dbUpdateHMSHandbookSection, getProjectDocuments as dbGetProjectDocuments, addProjectDocument as dbAddProjectDocument, deleteProjectDocument as dbDeleteProjectDocument, createShareToken as dbCreateShareToken, getProjectByShareToken as dbGetProjectByShareToken, deleteProject as dbDeleteProject } from "./db";
 import { Project, Customer, Checklist, SJA, Deviation } from "./types";
 
 // Re-export types for convenience
@@ -8,6 +8,7 @@ export * from "./types";
 export async function getProjects(): Promise<Project[]> {
     return await dbGetProjects();
 }
+
 
 export async function getCustomers(): Promise<Customer[]> {
     return await dbGetCustomers();
@@ -132,6 +133,99 @@ export async function createShareToken(projectId: string) {
     return await dbCreateShareToken(projectId);
 }
 
-export async function getProjectByShareToken(token: string) {
-    return await dbGetProjectByShareToken(token);
+
+// New Structure & Roles Exports
+export async function getUsers() {
+    const { getUsers } = await import("./db");
+    return await getUsers();
+}
+
+export async function getCompany() {
+    const { getCompany } = await import("./db");
+    return await getCompany();
+}
+
+// Mutators with Audit Logging
+export async function addProject(project: Project, userId: string) {
+    const { addProject: dbAddProject } = await import("./db");
+    const { logAudit } = await import("./db");
+
+    await dbAddProject(project);
+    await logAudit({
+        entityType: "project",
+        entityId: project.id,
+        action: "CREATE",
+        changedBy: userId,
+        details: { name: project.name }
+    });
+}
+
+export async function updateProject(project: Project, userId: string) {
+    const { updateProject: dbUpdateProject } = await import("./db");
+    const { logAudit } = await import("./db");
+
+    await dbUpdateProject(project);
+    await logAudit({
+        entityType: "project",
+        entityId: project.id,
+        action: "UPDATE",
+        changedBy: userId,
+        details: project
+    });
+}
+
+export async function addCustomer(customer: Customer, userId: string) {
+    const { addCustomer: dbAddCustomer } = await import("./db");
+    const { logAudit } = await import("./db");
+
+    await dbAddCustomer(customer);
+    await logAudit({
+        entityType: "customer",
+        entityId: customer.id,
+        action: "CREATE",
+        changedBy: userId,
+        details: { name: customer.name }
+    });
+}
+
+export async function updateCustomer(customer: Customer, userId: string) {
+    const { updateCustomer: dbUpdateCustomer } = await import("./db");
+    const { logAudit } = await import("./db");
+
+    await dbUpdateCustomer(customer);
+    await logAudit({
+        entityType: "customer",
+        entityId: customer.id,
+        action: "UPDATE",
+        changedBy: userId,
+        details: customer
+    });
+}
+
+export async function deleteProject(id: string, userId: string = "unknown") {
+    const { deleteProject: dbDeleteProject } = await import("./db");
+    const { logAudit } = await import("./db");
+
+    await dbDeleteProject(id);
+    await logAudit({
+        entityType: "project",
+        entityId: id,
+        action: "DELETE",
+        changedBy: userId,
+        details: { id }
+    });
+}
+
+export async function deleteCustomer(id: string, userId: string) {
+    const { deleteCustomer: dbDeleteCustomer } = await import("./db");
+    const { logAudit } = await import("./db");
+
+    await dbDeleteCustomer(id);
+    await logAudit({
+        entityType: "customer",
+        entityId: id,
+        action: "DELETE",
+        changedBy: userId,
+        details: { id }
+    });
 }

@@ -1,11 +1,11 @@
 "use client";
 
-import { addCustomer, updateCustomer } from "@/lib/db";
-import { Customer } from "@/lib/types";
+import { addCustomer, updateCustomer, getUsers } from "@/lib/data";
+import { Customer, User } from "@/lib/types";
 import Link from "next/link";
 import { ArrowLeft, Save } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 interface CustomerFormProps {
     initialData?: Customer;
@@ -15,14 +15,32 @@ export default function CustomerForm({ initialData }: CustomerFormProps) {
     const router = useRouter();
     const isEditing = !!initialData;
     const [loading, setLoading] = useState(false);
+    const [currentUser, setCurrentUser] = useState<User | null>(null);
+    const [users, setUsers] = useState<User[]>([]);
+
+    useEffect(() => {
+        getUsers().then(u => {
+            setUsers(u);
+            const admin = u.find(user => user.role === "admin");
+            if (admin) setCurrentUser(admin);
+        });
+    }, []);
 
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         setLoading(true);
         const formData = new FormData(e.currentTarget);
 
+        const userId = currentUser?.id || users[0]?.id;
+        if (!userId) {
+            alert("Mangler bruker-ID for logging. Kan ikke lagre.");
+            setLoading(false);
+            return;
+        }
+
         const customerData: Customer = {
             id: initialData?.id || Math.random().toString(36).substring(2, 9),
+            companyId: initialData?.companyId || users[0]?.companyId,
             name: formData.get("name") as string,
             email: formData.get("email") as string,
             phone: formData.get("phone") as string,
@@ -36,9 +54,9 @@ export default function CustomerForm({ initialData }: CustomerFormProps) {
 
         try {
             if (isEditing) {
-                await updateCustomer(customerData);
+                await updateCustomer(customerData, userId);
             } else {
-                await addCustomer(customerData);
+                await addCustomer(customerData, userId);
             }
             router.push("/customers");
             router.refresh();

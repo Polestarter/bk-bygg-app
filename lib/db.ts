@@ -1,6 +1,6 @@
 
 import { supabase } from "./supabaseClient";
-import { Project, Customer, Checklist, ChecklistTemplate, Offer, SJA, SJATemplate, SafetyRound, Deviation, DeviationAction, HMSHandbookSection, ProjectDocument } from "./types";
+import { Project, Customer, Checklist, ChecklistTemplate, Offer, SJA, SJATemplate, SafetyRound, Deviation, DeviationAction, HMSHandbookSection, ProjectDocument, User, Company, ProjectMember, AuditLog } from "./types";
 
 // Helper to strip "undefined" fields because Supabase/JSON doesn't like them?
 // Actually Supabase JS handles it, but undefined is not valid JSON.
@@ -368,5 +368,96 @@ export async function getProjectByShareToken(token: string): Promise<Project | u
         timeEntries: p.timeEntries || [],
         files: p.files || [],
         expenses: p.expenses || []
+    };
+}
+
+// User & Role Management
+export async function getUsers(): Promise<User[]> {
+    const { data } = await supabase.from("users").select("*");
+    // Remap snake_case to camelCase
+    return (data || []).map((u: any) => ({
+        id: u.id,
+        companyId: u.company_id,
+        email: u.email,
+        firstName: u.first_name,
+        lastName: u.last_name,
+        role: u.role,
+        phone: u.phone
+    }));
+}
+
+export async function getCompany(): Promise<Company | null> {
+    const { data } = await supabase.from("companies").select("*").single();
+    if (!data) return null;
+    return {
+        id: data.id,
+        name: data.name,
+        orgNr: data.org_nr,
+        address: data.address
+    };
+}
+
+// Audit Logs
+export async function logAudit(entry: Omit<AuditLog, "id" | "timestamp">): Promise<void> {
+    const { error } = await supabase.from("audit_logs").insert({
+        entity_type: entry.entityType,
+        entity_id: entry.entityId,
+        action: entry.action,
+        changed_by: entry.changedBy,
+        details: entry.details
+    });
+    if (error) console.error("Audit Log Error:", error);
+}
+
+export async function getAuditLogs(entityId?: string): Promise<AuditLog[]> {
+    let query = supabase.from("audit_logs").select("*").order("timestamp", { ascending: false });
+    if (entityId) {
+        query = query.eq("entity_id", entityId);
+    }
+    const { data } = await query;
+    return (data || []).map((l: any) => ({
+        id: l.id,
+        entityType: l.entity_type,
+        entityId: l.entity_id,
+        action: l.action,
+        changedBy: l.changed_by,
+        timestamp: l.timestamp,
+        details: l.details
+    }));
+}
+
+// Expanded Project Fetching (For Dashboard)
+export async function getProjectDetails(id: string): Promise<Project | undefined> {
+    // Fetch project with joined data if possible, or parallel requests
+    const { data: p, error } = await supabase.from("projects").select("*").eq("id", id).single();
+    if (error || !p) return undefined;
+
+    // TODO: Ideally use supabase foreign key joins for expenses, extras, etc.
+    // For now, assume simple mapping or fetch separately if needed.
+    // Mapping snake_case from DB to camelCase Types
+
+    return {
+        id: p.id,
+        companyId: p.company_id,
+        name: p.name,
+        customerId: p.customer_id || p.customerId, // Handing potential mixed conventions
+        address: p.address,
+        status: p.status, // or p.status_new
+        projectType: p.project_type,
+        contractType: p.contract_type,
+        startDate: p.start_date || p.startDate,
+        endDate: p.end_date || p.endDate,
+        endDateEstimated: p.end_date_estimated,
+        projectLeaderId: p.project_leader_id,
+
+        budgetExVAT: p.budgetExVAT || 0, // Fallback if column names differ
+        spentExVAT: p.spentExVAT || 0,
+        pricingType: p.pricingType,
+
+        // Mocked or empty for now unless we implement proper joins
+        files: [],
+        expenses: [],
+        extras: [],
+        timeEntries: []
     };
 }

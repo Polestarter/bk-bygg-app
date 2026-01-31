@@ -2,13 +2,55 @@ export type ProjectStatus = "Aktiv" | "Fullført" | "Planlagt";
 export type PricingType = "Fastpris" | "Timespris";
 export type ItemStatus = "Safe" | "Unsafe" | "NA" | null;
 
+export type UserRole = "admin" | "project_leader" | "worker";
+
+export interface Company {
+    id: string;
+    name: string;
+    orgNr?: string;
+    address?: string;
+}
+
+export interface User {
+    id: string;
+    companyId: string;
+    email: string;
+    firstName: string;
+    lastName: string;
+    role: UserRole;
+    phone?: string;
+}
+
 export interface Customer {
     id: string;
+    companyId?: string; // Tenant
     name: string;
     email: string;
     phone: string;
-    address: string;
+    orgNr?: string;
+    invoiceAddress?: string;
+    deliveryAddress?: string;
+    address?: string; // Legacy/fallback
 }
+
+export interface ProjectMember {
+    projectId: string;
+    userId: string;
+    role?: UserRole;
+    joinedAt: string;
+}
+
+export interface AuditLog {
+    id: string;
+    entityType: string;
+    entityId: string;
+    action: "CREATE" | "UPDATE" | "DELETE";
+    changedBy: string;
+    timestamp: string;
+    details: any;
+}
+
+// ... existing ProjectFile, Expense, Extra, TimeEntry ...
 
 export interface ProjectFile {
     id: string;
@@ -49,12 +91,20 @@ export interface TimeEntry {
 
 export interface Project {
     id: string;
+    companyId?: string;
     name: string;
     customerId: string;
     address: string;
     status: ProjectStatus;
+
+    // New Fields
+    projectType?: "rehab" | "nybygg" | "service";
+    contractType?: "fastpris" | "regning" | "delt";
     startDate: string;
-    endDate: string | undefined;
+    endDate?: string; // Actual end date?
+    endDateEstimated?: string;
+    projectLeaderId?: string;
+
     budgetExVAT: number;
     spentExVAT: number;
     pricingType: PricingType;
