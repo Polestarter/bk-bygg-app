@@ -255,7 +255,12 @@ export async function updateHMSHandbookSection(id: string, content: string): Pro
 
 // Project Documents
 export async function getProjectDocuments(projectId: string): Promise<ProjectDocument[]> {
-    const { data, error } = await supabase.from("project_documents").select("*").eq("project_id", projectId).order("uploaded_at", { ascending: false });
+    // Exclude file_url to improve performance (it contains base64 data)
+    const { data, error } = await supabase.from("project_documents")
+        .select("id, project_id, title, category, description, uploaded_at, uploaded_by") // Explicitly exclude file_url
+        .eq("project_id", projectId)
+        .order("uploaded_at", { ascending: false });
+
     if (error) throw error;
     return (data || []).map((d: any) => ({
         id: d.id,
@@ -263,10 +268,20 @@ export async function getProjectDocuments(projectId: string): Promise<ProjectDoc
         title: d.title,
         category: d.category,
         description: d.description,
-        fileUrl: d.file_url,
+        fileUrl: "", // Empty for list view, fetch on demand
         uploadedAt: d.uploaded_at,
         uploadedBy: d.uploaded_by
     }));
+}
+
+export async function getProjectDocumentContent(id: string): Promise<string | null> {
+    const { data, error } = await supabase.from("project_documents")
+        .select("file_url")
+        .eq("id", id)
+        .single();
+
+    if (error) return null;
+    return data?.file_url || null;
 }
 
 export async function addProjectDocument(doc: Omit<ProjectDocument, "id" | "uploadedAt">): Promise<ProjectDocument> {

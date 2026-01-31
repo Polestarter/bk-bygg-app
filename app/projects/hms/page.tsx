@@ -214,20 +214,7 @@ function ProjectHMSContent() {
                     ) : (
                         <div style={{ display: "grid", gap: "1rem" }}>
                             {filteredDocs.map(doc => (
-                                <div key={doc.id} className="card" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                                    <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
-                                        <FileText size={24} color="var(--primary)" />
-                                        <div>
-                                            <h4 style={{ margin: 0 }}>{doc.title}</h4>
-                                            <p style={{ margin: 0, fontSize: "0.8rem", color: "var(--muted-foreground)" }}>
-                                                Lastet opp {new Date(doc.uploadedAt).toLocaleDateString()}
-                                            </p>
-                                        </div>
-                                    </div>
-                                    <a href={doc.fileUrl} target="_blank" rel="noopener noreferrer" className="btn-icon">
-                                        <Eye size={20} />
-                                    </a>
-                                </div>
+                                <ProjectDocumentItem key={doc.id} doc={doc} />
                             ))}
                         </div>
                     )}
@@ -259,7 +246,7 @@ function ProjectHMSContent() {
                         </button>
                         <h2 style={{ marginBottom: "1rem" }}>Scan QR for HMS</h2>
                         <img
-                            src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(`${window.location.origin}/share/hms?token=${qrToken}`)}`}
+                            src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(`${window.location.origin}${window.location.pathname.includes("/bk-bygg-app") ? "/bk-bygg-app" : ""}/share/hms?token=${qrToken}`)}`}
                             alt="QR Code"
                             style={{ marginBottom: "1rem" }}
                         />
@@ -267,11 +254,59 @@ function ProjectHMSContent() {
                             Scan med kamera for å se HMS-dokumentasjon (Read-only).
                         </p>
                         <div style={{ background: "#f5f5f5", padding: "0.5rem", borderRadius: "4px", fontSize: "0.8rem", wordBreak: "break-all" }}>
-                            {window.location.origin}/share/hms?token={qrToken}
+                            {window.location.origin}{window.location.pathname.includes("/bk-bygg-app") ? "/bk-bygg-app" : ""}/share/hms?token={qrToken}
                         </div>
                     </div>
                 </div>
             )}
         </main>
+    );
+}
+
+function ProjectDocumentItem({ doc }: { doc: ProjectDocument }) {
+    const [downloading, setDownloading] = useState(false);
+
+    const handleDownload = async () => {
+        setDownloading(true);
+        try {
+            const { getProjectDocumentContent } = await import("@/lib/db");
+            const content = await getProjectDocumentContent(doc.id);
+            if (!content) {
+                alert("Kunne ikke laste dokumentinnhold.");
+                return;
+            }
+            // Trigger download
+            const a = document.createElement("a");
+            a.href = content;
+            a.download = doc.title; // Best guess name, real type is unknown
+            a.click();
+        } catch (error) {
+            console.error(error);
+            alert("Feil ved nedlasting.");
+        } finally {
+            setDownloading(false);
+        }
+    };
+
+    return (
+        <div className="card" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
+                <FileText size={24} color="var(--primary)" />
+                <div>
+                    <h4 style={{ margin: 0 }}>{doc.title}</h4>
+                    <p style={{ margin: 0, fontSize: "0.8rem", color: "var(--muted-foreground)" }}>
+                        Lastet opp {new Date(doc.uploadedAt).toLocaleDateString()}
+                    </p>
+                </div>
+            </div>
+            <button
+                onClick={handleDownload}
+                className="btn-icon"
+                disabled={downloading}
+                title="Last ned / Vis"
+            >
+                {downloading ? <span className="loading loading-spinner loading-xs">...</span> : <Eye size={20} />}
+            </button>
+        </div>
     );
 }
