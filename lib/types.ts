@@ -240,7 +240,26 @@ export interface Deviation {
     photos: string[]; // Base64 or URLs
     createdAt: string;
     updatedAt: string;
-    closedAt?: string;
     closedBy?: string;
     actions?: DeviationAction[]; // Joined view
+}
+
+// HMS Module
+export interface HMSHandbookSection {
+    id: string;
+    title: string;
+    content: string; // Markdown/HTML
+    orderIndex: number;
+    lastUpdatedAt: string;
+}
+
+export interface ProjectDocument {
+    id: string;
+    projectId: string;
+    title: string;
+    category: "SHA" | "SJA" | "Stoffkartotek" | "Brukermanualer" | "Samsvarserklæringer" | "Tilsyn/Export";
+    description?: string;
+    fileUrl: string;
+    uploadedAt: string;
+    uploadedBy?: string;
 }

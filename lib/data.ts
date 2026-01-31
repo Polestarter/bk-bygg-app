@@ -1,4 +1,4 @@
-import { getProjects as dbGetProjects, getCustomers as dbGetCustomers, getChecklists as dbGetChecklists, getChecklistTemplates as dbGetChecklistTemplates, getSJAs as dbGetSJAs, getSJATemplates as dbGetSJATemplates, addSJA as dbAddSJA, getSJA as dbGetSJA, updateSJA as dbUpdateSJA, getSafetyRounds as dbGetSafetyRounds, getSafetyRound as dbGetSafetyRound, addSafetyRound as dbAddSafetyRound, updateSafetyRound as dbUpdateSafetyRound, getDeviations as dbGetDeviations, getDeviation as dbGetDeviation, addDeviation as dbAddDeviation, updateDeviation as dbUpdateDeviation, addDeviationAction as dbAddDeviationAction, toggleDeviationAction as dbToggleDeviationAction } from "./db";
+import { getProjects as dbGetProjects, getCustomers as dbGetCustomers, getChecklists as dbGetChecklists, getChecklistTemplates as dbGetChecklistTemplates, getSJAs as dbGetSJAs, getSJATemplates as dbGetSJATemplates, addSJA as dbAddSJA, getSJA as dbGetSJA, updateSJA as dbUpdateSJA, getSafetyRounds as dbGetSafetyRounds, getSafetyRound as dbGetSafetyRound, addSafetyRound as dbAddSafetyRound, updateSafetyRound as dbUpdateSafetyRound, getDeviations as dbGetDeviations, getDeviation as dbGetDeviation, addDeviation as dbAddDeviation, updateDeviation as dbUpdateDeviation, addDeviationAction as dbAddDeviationAction, toggleDeviationAction as dbToggleDeviationAction, getHMSHandbookSections as dbGetHMSHandbookSections, updateHMSHandbookSection as dbUpdateHMSHandbookSection, getProjectDocuments as dbGetProjectDocuments, addProjectDocument as dbAddProjectDocument, createShareToken as dbCreateShareToken, getProjectByShareToken as dbGetProjectByShareToken } from "./db";
 import { Project, Customer, Checklist, SJA, Deviation } from "./types";
 
 // Re-export types for convenience
@@ -105,4 +105,29 @@ export async function addDeviationAction(deviationId: string, description: strin
 
 export async function toggleDeviationAction(actionId: string, completed: boolean, user: string) {
     return await dbToggleDeviationAction(actionId, completed, user);
+}
+
+// HMS
+export async function getHMSHandbookSections() {
+    return await dbGetHMSHandbookSections();
+}
+
+export async function updateHMSHandbookSection(id: string, content: string) {
+    return await dbUpdateHMSHandbookSection(id, content);
+}
+
+export async function getProjectDocuments(projectId: string) {
+    return await dbGetProjectDocuments(projectId);
+}
+
+export async function addProjectDocument(doc: any) {
+    return await dbAddProjectDocument(doc);
+}
+
+export async function createShareToken(projectId: string) {
+    return await dbCreateShareToken(projectId);
+}
+
+export async function getProjectByShareToken(token: string) {
+    return await dbGetProjectByShareToken(token);
 }

@@ -294,6 +294,24 @@ function ProjectDetailsContent() {
                             </div>
                         </div>
                     </Link>
+
+                    <Link href={`/projects/hms?projectId=${project.id}`} style={{ textDecoration: "none" }}>
+                        <div className="card hover-effect" style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
+                            <div style={{
+                                width: "48px", height: "48px", borderRadius: "12px",
+                                backgroundColor: "rgba(139, 92, 246, 0.1)", display: "flex", // Violet tint
+                                alignItems: "center", justifyContent: "center"
+                            }}>
+                                <ShieldCheck size={24} color="#8b5cf6" />
+                            </div>
+                            <div>
+                                <h3 style={{ fontSize: "1.1rem", margin: 0, marginBottom: "0.25rem" }}>HMS Dokumenter</h3>
+                                <p style={{ margin: 0, color: "var(--muted-foreground)", fontSize: "0.875rem" }}>
+                                    SHA, SJA og sikkerhetsrutiner
+                                </p>
+                            </div>
+                        </div>
+                    </Link>
                 </div>
             </div>
 

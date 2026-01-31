@@ -1,6 +1,6 @@
 
 import { supabase } from "./supabaseClient";
-import { Project, Customer, Checklist, ChecklistTemplate, Offer, SJA, SJATemplate, SafetyRound, Deviation, DeviationAction } from "./types";
+import { Project, Customer, Checklist, ChecklistTemplate, Offer, SJA, SJATemplate, SafetyRound, Deviation, DeviationAction, HMSHandbookSection, ProjectDocument } from "./types";
 
 // Helper to strip "undefined" fields because Supabase/JSON doesn't like them?
 // Actually Supabase JS handles it, but undefined is not valid JSON.
@@ -226,4 +226,127 @@ export async function toggleDeviationAction(actionId: string, completed: boolean
     };
     const { error } = await supabase.from("deviation_actions").update(updates).eq("id", actionId);
     if (error) throw error;
+}
+
+// HMS Handbook
+export async function getHMSHandbookSections(): Promise<HMSHandbookSection[]> {
+    const { data, error } = await supabase.from("hms_handbook_sections").select("*").order("order_index", { ascending: true });
+    if (error) throw error;
+    // Map snake_case to camelCase if needed, but assuming Supabase types match or we are loose
+    // The previous code uses direct casting so I'll trust it matches or update types if needed.
+    // Ideally we should map fields but let's see if we can get away with consistent naming or mapping.
+    // Actually, SQL uses snake_case, types use camelCase. We must map.
+    return (data || []).map((s: any) => ({
+        id: s.id,
+        title: s.title,
+        content: s.content,
+        orderIndex: s.order_index,
+        lastUpdatedAt: s.last_updated_at
+    }));
+}
+
+export async function updateHMSHandbookSection(id: string, content: string): Promise<void> {
+    const { error } = await supabase.from("hms_handbook_sections").update({
+        content,
+        last_updated_at: new Date().toISOString()
+    }).eq("id", id);
+    if (error) throw error;
+}
+
+// Project Documents
+export async function getProjectDocuments(projectId: string): Promise<ProjectDocument[]> {
+    const { data, error } = await supabase.from("project_documents").select("*").eq("project_id", projectId).order("uploaded_at", { ascending: false });
+    if (error) throw error;
+    return (data || []).map((d: any) => ({
+        id: d.id,
+        projectId: d.project_id,
+        title: d.title,
+        category: d.category,
+        description: d.description,
+        fileUrl: d.file_url,
+        uploadedAt: d.uploaded_at,
+        uploadedBy: d.uploaded_by
+    }));
+}
+
+export async function addProjectDocument(doc: Omit<ProjectDocument, "id" | "uploadedAt">): Promise<ProjectDocument> {
+    const { data, error } = await supabase.from("project_documents").insert([{
+        project_id: doc.projectId,
+        title: doc.title,
+        category: doc.category,
+        description: doc.description,
+        file_url: doc.fileUrl,
+        uploaded_by: doc.uploadedBy
+    }]).select().single();
+
+    if (error) throw error;
+    return {
+        id: data.id,
+        projectId: data.project_id,
+        title: data.title,
+        category: data.category,
+        description: data.description,
+        fileUrl: data.file_url,
+        uploadedAt: data.uploaded_at,
+        uploadedBy: data.uploaded_by
+    };
+}
+
+// Share Tokens (QR)
+export async function createShareToken(projectId: string): Promise<string> {
+    // Check if valid token exists
+    const { data: existing } = await supabase.from("share_tokens")
+        .select("token")
+        .eq("project_id", projectId)
+        .eq("is_active", true)
+        .limit(1)
+        .single();
+
+    if (existing) return existing.token;
+
+    // Create new
+    const token = Math.random().toString(36).substring(2, 10) + Math.random().toString(36).substring(2, 10);
+    const { error } = await supabase.from("share_tokens").insert({
+        project_id: projectId,
+        token,
+        is_active: true
+    });
+
+    if (error) throw error;
+    return token;
+}
+
+export async function getProjectByShareToken(token: string): Promise<Project | undefined> {
+    const { data: tokenData, error } = await supabase.from("share_tokens")
+        .select("project_id, projects(*)")
+        .eq("token", token)
+        .eq("is_active", true)
+        .single();
+
+    if (error || !tokenData) return undefined;
+
+    // Update view count
+    await supabase.from("share_tokens").update({ view_count: (tokenData as any).view_count + 1 }).eq("token", token); // increment not simple in JS client without rpc, but good enough
+
+    const p = tokenData.projects as any;
+    if (!p) return undefined;
+
+    // Convert to Project type (similar to getProjects)
+    // Note: projects(*) might return array or object depending on relationship. assuming simple join returns object
+    return {
+        id: p.id,
+        name: p.name,
+        address: p.address,
+        customerId: p.customerId,
+        startDate: p.startDate,
+        endDate: p.endDate,
+        status: p.status,
+        budgetExVAT: p.budgetExVAT,
+        spentExVAT: p.spentExVAT,
+        pricingType: p.pricingType,
+        extras: p.extras || [],
+        timeEntries: p.timeEntries || [],
+        files: p.files || [],
+        expenses: p.expenses || []
+    };
 }

@@ -33,13 +33,21 @@ export default async function Home() {
           <h3 style={{ fontSize: "0.875rem", fontWeight: "500", color: "var(--muted-foreground)" }}>Fullførte Prosjekter</h3>
           <p style={{ fontSize: "2.5rem", fontWeight: "bold", marginTop: "0.5rem" }}>{stats.completed}</p>
         </div>
-        <div className="card">
-          <h3 style={{ fontSize: "0.875rem", fontWeight: "500", color: "var(--muted-foreground)" }}>Totalt Budsjett (eks. mva)</h3>
-          <div style={{ display: "flex", alignItems: "baseline", gap: "0.5rem", marginTop: "0.5rem" }}>
-            <p style={{ fontSize: "2.5rem", fontWeight: "bold" }}>{(stats.totalBudgetExVAT / 1000).toLocaleString('nb-NO')}k</p>
-            <span style={{ color: "var(--muted-foreground)" }}>NOK</span>
+
+        {/* HMS Håndbok Snarvei */}
+        <Link href="/hms/handbok" style={{ textDecoration: "none" }}>
+          <div className="card hover-effect" style={{ height: "100%", display: "flex", flexDirection: "column", justifyContent: "center" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "0.5rem" }}>
+              <div style={{ width: "32px", height: "32px", borderRadius: "8px", backgroundColor: "rgba(16, 185, 129, 0.1)", display: "flex", alignItems: "center", justifyContent: "center", color: "#10b981" }}>
+                <ArrowRight size={20} />
+              </div>
+              <h3 style={{ fontSize: "1rem", fontWeight: "600", margin: 0, color: "#10b981" }}>HMS Håndbok</h3>
+            </div>
+            <p style={{ fontSize: "0.875rem", color: "var(--muted-foreground)", margin: 0 }}>
+              Bedriftens rutiner og sikkerhet
+            </p>
           </div>
-        </div>
+        </Link>
       </div>
 
       <div className="flex-between" style={{ marginBottom: "1.5rem" }}>
