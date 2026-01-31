@@ -1,3 +1,5 @@
+"use client";
+
 import { getProjects, getCustomer, getChecklistTemplates, getChecklists, deleteProject, getUsers } from "@/lib/data";
 import { Project, Customer, ChecklistTemplate, Checklist, User } from "@/lib/types";
 import Link from "next/link";

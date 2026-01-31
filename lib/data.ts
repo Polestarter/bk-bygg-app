@@ -133,6 +133,10 @@ export async function createShareToken(projectId: string) {
     return await dbCreateShareToken(projectId);
 }
 
+export async function getProjectByShareToken(token: string) {
+    return await dbGetProjectByShareToken(token);
+}
+
 
 // New Structure & Roles Exports
 export async function getUsers() {
