@@ -119,6 +119,54 @@ function ProjectHMSContent() {
         doc.save(`HMS-Oversikt-${project.name}.pdf`);
     };
 
+    const handleDownloadAllZip = async () => {
+        if (!project || documents.length === 0) return;
+        const confirm = window.confirm(`Vil du laste ned ${documents.length} dokumenter som ZIP? Dette kan ta litt tid.`);
+        if (!confirm) return;
+
+        try {
+            // Lazy load libraries
+            const JSZip = (await import("jszip")).default;
+            const { saveAs } = await import("file-saver");
+            const { getProjectDocumentContent } = await import("@/lib/db");
+
+            const zip = new JSZip();
+            const folder = zip.folder("HMS-Dokumenter");
+
+            // Process sequentially to avoid memory spikes
+            let count = 0;
+            for (const doc of documents) {
+                const content = await getProjectDocumentContent(doc.id);
+                if (content) {
+                    // content is "data:application/pdf;base64,....."
+                    // We need to strip the prefix to get pure base64 for JSZip
+                    const base64Data = content.split(',')[1];
+                    if (base64Data) {
+                        // Try to detect extension from mime type
+                        let extension = "pdf";
+                        if (content.includes("image/jpeg")) extension = "jpg";
+                        if (content.includes("image/png")) extension = "png";
+
+                        folder?.file(`${doc.title}.${extension}`, base64Data, { base64: true });
+                        count++;
+                    }
+                }
+            }
+
+            if (count === 0) {
+                alert("Fant ingen filer å laste ned.");
+                return;
+            }
+
+            const content = await zip.generateAsync({ type: "blob" });
+            saveAs(content, `HMS-Dokumenter-${project.name}.zip`);
+
+        } catch (error) {
+            console.error("ZIP export failed", error);
+            alert("Kunne ikke generere ZIP-fil.");
+        }
+    };
+
     if (loading) return <div className="container" style={{ paddingTop: "2rem" }}>Laster HMS-dokumenter...</div>;
     if (!project) return <div className="container" style={{ paddingTop: "2rem" }}>Prosjekt ikke funnet</div>;
 
@@ -134,7 +182,7 @@ function ProjectHMSContent() {
                     <h1 style={{ margin: 0, fontSize: "1.75rem" }}>HMS-dokumentasjon</h1>
                     <p style={{ margin: 0, color: "var(--muted-foreground)" }}>{project.name} - {project.address}</p>
                 </div>
-                <div style={{ display: "flex", gap: "0.5rem" }}>
+                <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", justifyContent: "flex-end" }}>
                     <button
                         onClick={handleShowQr}
                         className="btn btn-outline"
@@ -145,7 +193,15 @@ function ProjectHMSContent() {
                     <button
                         onClick={generatePDF}
                         className="btn btn-outline"
-                        title="Last ned oversikt"
+                        title="Last ned oversikt (PDF)"
+                    >
+                        <FileText size={20} />
+                    </button>
+                    <button
+                        onClick={handleDownloadAllZip}
+                        className="btn btn-outline"
+                        title="Last ned alle (ZIP)"
+                        disabled={documents.length === 0}
                     >
                         <Download size={20} />
                     </button>
@@ -264,10 +320,10 @@ function ProjectHMSContent() {
 }
 
 function ProjectDocumentItem({ doc }: { doc: ProjectDocument }) {
-    const [downloading, setDownloading] = useState(false);
+    const [loading, setLoading] = useState(false);
 
-    const handleDownload = async () => {
-        setDownloading(true);
+    const handleView = async () => {
+        setLoading(true);
         try {
             const { getProjectDocumentContent } = await import("@/lib/db");
             const content = await getProjectDocumentContent(doc.id);
@@ -275,37 +331,40 @@ function ProjectDocumentItem({ doc }: { doc: ProjectDocument }) {
                 alert("Kunne ikke laste dokumentinnhold.");
                 return;
             }
-            // Trigger download
-            const a = document.createElement("a");
-            a.href = content;
-            a.download = doc.title; // Best guess name, real type is unknown
-            a.click();
+            // Open in new tab
+            const win = window.open();
+            if (win) {
+                win.document.write(`<iframe src="${content}" frameborder="0" style="border:0; top:0px; left:0px; bottom:0px; right:0px; width:100%; height:100%;" allowfullscreen></iframe>`);
+            } else {
+                // Fallback if popup blocked
+                window.location.href = content;
+            }
         } catch (error) {
             console.error(error);
-            alert("Feil ved nedlasting.");
+            alert("Feil ved åpning.");
         } finally {
-            setDownloading(false);
+            setLoading(false);
         }
     };
 
     return (
         <div className="card" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
-                <FileText size={24} color="var(--primary)" />
-                <div>
-                    <h4 style={{ margin: 0 }}>{doc.title}</h4>
+            <div style={{ display: "flex", alignItems: "center", gap: "1rem", overflow: "hidden" }}>
+                <FileText size={24} color="var(--primary)" style={{ flexShrink: 0 }} />
+                <div style={{ minWidth: 0 }}>
+                    <h4 style={{ margin: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{doc.title}</h4>
                     <p style={{ margin: 0, fontSize: "0.8rem", color: "var(--muted-foreground)" }}>
-                        Lastet opp {new Date(doc.uploadedAt).toLocaleDateString()}
+                        {new Date(doc.uploadedAt).toLocaleDateString()}
                     </p>
                 </div>
             </div>
             <button
-                onClick={handleDownload}
+                onClick={handleView}
                 className="btn-icon"
-                disabled={downloading}
-                title="Last ned / Vis"
+                disabled={loading}
+                title="Vis dokument"
             >
-                {downloading ? <span className="loading loading-spinner loading-xs">...</span> : <Eye size={20} />}
+                {loading ? <span className="loading loading-spinner loading-xs">...</span> : <Eye size={20} />}
             </button>
         </div>
     );
