@@ -38,30 +38,37 @@ export default function UploadDocumentModal({ projectId, category, onClose, onUp
         if (!file || !title) return;
 
         setUploading(true);
-
         try {
-            // Simulate upload delay
-            await new Promise(resolve => setTimeout(resolve, 1000));
+            // Convert file to Base64
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
 
-            // TODO: Implement actual Supabase Storage upload here
-            // const { data, error } = await supabase.storage.from('project-documents').upload(...)
+            reader.onload = async () => {
+                const base64File = reader.result as string;
 
-            const content = {
-                projectId,
-                title,
-                category: selectedCategory as any,
-                description,
-                fileUrl: "https://example.com/placeholder-document.pdf", // Mock URL
-                uploadedBy: "Jolly (Demo)" // In a real app, get from auth context
+                const content = {
+                    projectId,
+                    title,
+                    category: selectedCategory as any,
+                    description,
+                    fileUrl: base64File, // Store the actual file data
+                    uploadedBy: "Jolly (Demo)"
+                };
+
+                const newDoc = await addProjectDocument(content);
+                onUploadComplete(newDoc);
+                onClose();
             };
 
-            const newDoc = await addProjectDocument(content);
-            onUploadComplete(newDoc);
-            onClose();
+            reader.onerror = (error) => {
+                console.error("File reading failed", error);
+                alert("Kunne ikke lese filen.");
+                setUploading(false);
+            };
+
         } catch (error) {
             console.error("Upload failed", error);
             alert("Opplasting feilet");
-        } finally {
             setUploading(false);
         }
     };
