@@ -1,13 +1,12 @@
 'use client';
 
-import { useState, useEffect, use } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { getFlipProject, getFlipParticipants, getFlipExpenses, getFlipLoans, getFlipLabor, getFlipSale } from '@/lib/flip-db';
 import { calculateFlipSettlement } from '@/lib/flip-calculations';
 import { FlipProject, FlipParticipant, FlipExpense, FlipLoan, FlipLaborEntry, FlipSale, SettlementResult } from '@/lib/flip-types';
 import AuthenticatedLayout from '@/components/AuthenticatedLayout';
 import { ArrowLeft, Users, Receipt, Banknote, Clock, Gavel, FileText } from 'lucide-react';
-import { formatCurrency } from '@/lib/utils'; // Assuming utils exists, or simple formatter
 
 import ParticipantsTab from '@/components/flip/ParticipantsTab';
 import ExpensesTab from '@/components/flip/ExpensesTab';
@@ -16,8 +15,9 @@ import LaborTab from '@/components/flip/LaborTab';
 import SaleTab from '@/components/flip/SaleTab';
 import SettlementTab from '@/components/flip/SettlementTab';
 
-export default function FlipProjectPage({ params }: { params: Promise<{ id: string }> }) {
-    const { id } = use(params);
+function FlipProjectContent() {
+    const searchParams = useSearchParams();
+    const id = searchParams.get('id');
     const router = useRouter();
 
     const [project, setProject] = useState<FlipProject | null>(null);
@@ -32,19 +32,23 @@ export default function FlipProjectPage({ params }: { params: Promise<{ id: stri
     const [activeTab, setActiveTab] = useState<'overview' | 'participants' | 'expenses' | 'loans' | 'labor' | 'sale' | 'settlement'>('overview');
 
     useEffect(() => {
-        loadData();
+        if (id) {
+            loadData(id);
+        } else {
+            setLoading(false);
+        }
     }, [id]);
 
-    const loadData = async () => {
+    const loadData = async (projectId: string) => {
         setLoading(true);
         // Parallel fetch
         const [p, parts, exps, lns, lab, sl] = await Promise.all([
-            getFlipProject(id),
-            getFlipParticipants(id),
-            getFlipExpenses(id),
-            getFlipLoans(id),
-            getFlipLabor(id),
-            getFlipSale(id)
+            getFlipProject(projectId),
+            getFlipParticipants(projectId),
+            getFlipExpenses(projectId),
+            getFlipLoans(projectId),
+            getFlipLabor(projectId),
+            getFlipSale(projectId)
         ]);
 
         if (p) {
@@ -63,7 +67,7 @@ export default function FlipProjectPage({ params }: { params: Promise<{ id: stri
     };
 
     if (loading) return <AuthenticatedLayout><div>Laster prosjektdata...</div></AuthenticatedLayout>;
-    if (!project) return <AuthenticatedLayout><div>Fant ikke prosjektet</div></AuthenticatedLayout>;
+    if (!id || !project) return <AuthenticatedLayout><div>Fant ikke prosjektet</div></AuthenticatedLayout>;
 
     const tabs = [
         { id: 'participants', label: 'Deltakere', icon: Users },
@@ -73,6 +77,10 @@ export default function FlipProjectPage({ params }: { params: Promise<{ id: stri
         { id: 'sale', label: 'Salg', icon: Gavel },
         { id: 'settlement', label: 'Oppgjør', icon: FileText },
     ];
+
+    const handleUpdate = () => {
+        if (id) loadData(id);
+    };
 
     return (
         <AuthenticatedLayout>
@@ -126,11 +134,11 @@ export default function FlipProjectPage({ params }: { params: Promise<{ id: stri
 
                 {/* Main Content Area */}
                 <div className="flex-1 overflow-auto p-8">
-                    {activeTab === 'participants' && <ParticipantsTab projectId={project.id} participants={participants} onUpdate={loadData} />}
-                    {activeTab === 'expenses' && <ExpensesTab projectId={project.id} expenses={expenses} participants={participants} onUpdate={loadData} />}
-                    {activeTab === 'loans' && <LoansTab projectId={project.id} loans={loans} participants={participants} onUpdate={loadData} />}
-                    {activeTab === 'labor' && <LaborTab projectId={project.id} labor={labor} participants={participants} onUpdate={loadData} />}
-                    {activeTab === 'sale' && <SaleTab projectId={project.id} sale={sale} onUpdate={loadData} />}
+                    {activeTab === 'participants' && <ParticipantsTab projectId={project.id} participants={participants} onUpdate={handleUpdate} />}
+                    {activeTab === 'expenses' && <ExpensesTab projectId={project.id} expenses={expenses} participants={participants} onUpdate={handleUpdate} />}
+                    {activeTab === 'loans' && <LoansTab projectId={project.id} loans={loans} participants={participants} onUpdate={handleUpdate} />}
+                    {activeTab === 'labor' && <LaborTab projectId={project.id} labor={labor} participants={participants} onUpdate={handleUpdate} />}
+                    {activeTab === 'sale' && <SaleTab projectId={project.id} sale={sale} onUpdate={handleUpdate} />}
                     {activeTab === 'settlement' && <SettlementTab result={settlement} />}
 
                     {activeTab === 'overview' && (
@@ -184,5 +192,13 @@ export default function FlipProjectPage({ params }: { params: Promise<{ id: stri
                 </div>
             </div>
         </AuthenticatedLayout>
+    );
+}
+
+export default function FlipProjectPage() {
+    return (
+        <Suspense fallback={<AuthenticatedLayout><div>Laster...</div></AuthenticatedLayout>}>
+            <FlipProjectContent />
+        </Suspense>
     );
 }
