@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/components/AuthProvider";
-import { LayoutDashboard, ClipboardList, Wallet, Settings, Building2, Users, FileText, LogOut } from "lucide-react";
+import { LayoutDashboard, ClipboardList, Wallet, Settings, Building2, Users, FileText, LogOut, TrendingUp } from "lucide-react";
 
 const navItems = [
     { name: "Oversikt", href: "/", icon: LayoutDashboard },
@@ -55,6 +55,10 @@ export default function Sidebar() {
                 <Link href="/finance" className={`nav-item ${pathname.includes("/finance") ? "active" : ""}`}>
                     <Wallet size={20} />
                     Økonomi
+                </Link>
+                <Link href="/flip" className={`nav-item ${pathname.includes("/flip") ? "active" : ""}`}>
+                    <TrendingUp size={20} />
+                    FlippeOppgjør
                 </Link>
                 <Link href="/settings" className={`nav-item ${pathname.includes("/settings") ? "active" : ""}`}>
                     <Settings size={20} />
