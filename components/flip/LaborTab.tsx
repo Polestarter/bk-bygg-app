@@ -1,9 +1,9 @@
-'use client';
+﻿'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { FlipLaborEntry, FlipParticipant } from '@/lib/flip-types';
 import { addFlipLabor, deleteFlipLabor } from '@/lib/flip-db';
-import { Plus, Trash2, Clock } from 'lucide-react';
+import { Clock3, Plus, Trash2 } from 'lucide-react';
 
 interface Props {
     projectId: string;
@@ -12,204 +12,233 @@ interface Props {
     onUpdate: () => void;
 }
 
-export default function LaborTab({ projectId, labor, participants, onUpdate }: Props) {
-    const [isAdding, setIsAdding] = useState(false);
+const inputStyle: React.CSSProperties = {
+    width: '100%',
+    padding: '0.6rem 0.7rem',
+    borderRadius: 'var(--radius)',
+    border: '1px solid var(--border)',
+    backgroundColor: 'var(--background)',
+    color: 'var(--foreground)'
+};
 
-    // Default rate logic
-    const getDefaultRate = (pid?: string) => {
-        if (!pid && participants.length > 0) return participants[0].standardRate;
-        const p = participants.find(part => part.id === pid);
-        return p ? p.standardRate : 500;
+export default function LaborTab({ projectId, labor, participants, onUpdate }: Props) {
+    const firstParticipantId = participants[0]?.id || '';
+
+    const getRate = (participantId: string) => {
+        return participants.find((participant) => participant.id === participantId)?.standardRate || 500;
     };
 
-    const [newEntry, setNewEntry] = useState<Partial<FlipLaborEntry>>({
+    const [isAdding, setIsAdding] = useState(false);
+    const [form, setForm] = useState<Partial<FlipLaborEntry>>({
         date: new Date().toISOString().split('T')[0],
-        participantId: participants[0]?.id || '',
+        participantId: firstParticipantId,
         hours: 0,
-        rate: getDefaultRate(participants[0]?.id),
+        rate: getRate(firstParticipantId),
         description: '',
         isBillable: true
     });
 
-    const handleParticipantChange = (pid: string) => {
-        setNewEntry({
-            ...newEntry,
-            participantId: pid,
-            rate: getDefaultRate(pid) // Auto-update rate when user changes
-        });
+    const totals = useMemo(() => {
+        const totalHours = labor.reduce((sum, entry) => sum + entry.hours, 0);
+        const billableValue = labor.reduce((sum, entry) => sum + (entry.isBillable ? entry.hours * entry.rate : 0), 0);
+        return { totalHours, billableValue };
+    }, [labor]);
+
+    const handleParticipantChange = (participantId: string) => {
+        setForm({ ...form, participantId, rate: getRate(participantId) });
     };
 
     const handleAdd = async () => {
-        if (!newEntry.participantId || !newEntry.hours) return;
+        if (!form.participantId || !form.hours) return;
 
         await addFlipLabor({
             projectId,
-            participantId: newEntry.participantId,
-            date: newEntry.date!,
-            hours: Number(newEntry.hours),
-            rate: Number(newEntry.rate),
-            description: newEntry.description,
-            isBillable: newEntry.isBillable !== false
+            participantId: form.participantId,
+            date: form.date || new Date().toISOString().split('T')[0],
+            hours: Number(form.hours),
+            rate: Number(form.rate) || 0,
+            description: form.description?.trim() || undefined,
+            isBillable: form.isBillable !== false
         });
 
-        setIsAdding(false);
-        // Reset but keep date
-        setNewEntry({
-            ...newEntry,
+        setForm({
+            ...form,
             hours: 0,
             description: ''
         });
+
+        setIsAdding(false);
         onUpdate();
     };
 
     const handleDelete = async (id: string) => {
-        if (confirm('Slett timeføring?')) {
-            await deleteFlipLabor(id);
-            onUpdate();
-        }
+        if (!confirm('Vil du slette denne timeforingen?')) return;
+        await deleteFlipLabor(id);
+        onUpdate();
     };
 
-    const getParticipantName = (id: string) => participants.find(p => p.id === id)?.name || 'Ukjent';
-
-    const totalHours = labor.reduce((sum, l) => sum + l.hours, 0);
-    const totalValue = labor.reduce((sum, l) => sum + (l.isBillable ? l.hours * l.rate : 0), 0);
+    const getParticipantName = (participantId: string) => {
+        return participants.find((participant) => participant.id === participantId)?.name || 'Ukjent';
+    };
 
     return (
-        <div className="max-w-4xl">
-            <div className="flex justify-between items-center mb-6">
-                <h2 className="text-xl font-bold flex items-center gap-2">
-                    <Clock size={24} /> Timeliste
-                </h2>
-                <button
-                    onClick={() => setIsAdding(true)}
-                    className="bg-black text-white px-4 py-2 rounded-lg text-sm flex items-center gap-2 hover:bg-gray-800"
-                >
-                    <Plus size={16} /> Registrer Timer
+        <div style={{ display: 'grid', gap: '1rem' }}>
+            <div className="flex-between" style={{ flexWrap: 'wrap', gap: '0.75rem' }}>
+                <div>
+                    <h2 style={{ fontSize: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <Clock3 size={20} /> Timer
+                    </h2>
+                    <p style={{ color: 'var(--muted-foreground)', fontSize: '0.9rem' }}>
+                        For timer per deltaker med sats og fakturerbar status.
+                    </p>
+                </div>
+
+                <button className="btn btn-primary" onClick={() => setIsAdding(true)} style={{ gap: '0.5rem' }}>
+                    <Plus size={16} /> Ny timeforing
                 </button>
             </div>
 
-            <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
-                <table className="w-full text-sm">
-                    <thead className="bg-gray-50 text-gray-500 font-medium">
-                        <tr>
-                            <th className="px-6 py-4 text-left">Dato</th>
-                            <th className="px-6 py-4 text-left">Navn</th>
-                            <th className="px-6 py-4 text-left">Beskrivelse</th>
-                            <th className="px-6 py-4 text-right">Timer</th>
-                            <th className="px-6 py-4 text-right">Sats</th>
-                            <th className="px-6 py-4 text-right">Totalt</th>
-                            <th className="px-6 py-4 text-right"></th>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '0.75rem' }}>
+                <div className="card" style={{ padding: '0.85rem 1rem' }}>
+                    <p style={{ color: 'var(--muted-foreground)', fontSize: '0.85rem' }}>Totale timer</p>
+                    <p style={{ fontWeight: 700, fontSize: '1.2rem' }}>{totals.totalHours.toLocaleString()} t</p>
+                </div>
+                <div className="card" style={{ padding: '0.85rem 1rem' }}>
+                    <p style={{ color: 'var(--muted-foreground)', fontSize: '0.85rem' }}>Fakturerbar verdi</p>
+                    <p style={{ fontWeight: 700, fontSize: '1.2rem' }}>{totals.billableValue.toLocaleString()} NOK</p>
+                </div>
+            </div>
+
+            <div className="card" style={{ overflowX: 'auto', padding: 0 }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 880 }}>
+                    <thead>
+                        <tr style={{ backgroundColor: 'var(--secondary)' }}>
+                            <th style={headerCell}>Dato</th>
+                            <th style={headerCell}>Deltaker</th>
+                            <th style={headerCell}>Beskrivelse</th>
+                            <th style={{ ...headerCell, textAlign: 'right' }}>Timer</th>
+                            <th style={{ ...headerCell, textAlign: 'right' }}>Sats</th>
+                            <th style={{ ...headerCell, textAlign: 'right' }}>Verdi</th>
+                            <th style={{ ...headerCell, textAlign: 'right' }}>Handling</th>
                         </tr>
                     </thead>
-                    <tbody className="divide-y divide-gray-100">
-                        {labor.map(l => (
-                            <tr key={l.id} className={!l.isBillable ? 'bg-gray-50 opacity-60' : ''}>
-                                <td className="px-6 py-4 text-gray-500">{l.date}</td>
-                                <td className="px-6 py-4 font-medium">{getParticipantName(l.participantId)}</td>
-                                <td className="px-6 py-4 text-gray-500">
-                                    {l.description}
-                                    {!l.isBillable && <span className="ml-2 text-xs border border-gray-300 px-1 rounded">Ikke fakturerbar</span>}
+                    <tbody>
+                        {labor.length === 0 && (
+                            <tr>
+                                <td colSpan={7} style={{ ...cell, color: 'var(--muted-foreground)', textAlign: 'center', padding: '2rem 1rem' }}>
+                                    Ingen timer registrert enda.
                                 </td>
-                                <td className="px-6 py-4 text-right">{l.hours}</td>
-                                <td className="px-6 py-4 text-right">{l.rate}</td>
-                                <td className="px-6 py-4 text-right font-medium">
-                                    {(l.hours * l.rate).toLocaleString()}
+                            </tr>
+                        )}
+
+                        {labor.map((entry) => (
+                            <tr key={entry.id} style={{ borderTop: '1px solid var(--border)', backgroundColor: entry.isBillable ? 'transparent' : '#f8fafc' }}>
+                                <td style={cell}>{entry.date}</td>
+                                <td style={cell}>{getParticipantName(entry.participantId)}</td>
+                                <td style={{ ...cell, color: 'var(--muted-foreground)' }}>
+                                    {entry.description || '-'}
+                                    {!entry.isBillable && (
+                                        <span style={nonBillableStyle}>Ikke fakturerbar</span>
+                                    )}
                                 </td>
-                                <td className="px-6 py-4 text-right">
-                                    <button onClick={() => handleDelete(l.id)} className="text-red-500 hover:text-red-700">
+                                <td style={{ ...cell, textAlign: 'right' }}>{entry.hours.toLocaleString()}</td>
+                                <td style={{ ...cell, textAlign: 'right' }}>{entry.rate.toLocaleString()} NOK/t</td>
+                                <td style={{ ...cell, textAlign: 'right', fontWeight: 600 }}>
+                                    {(entry.hours * entry.rate).toLocaleString()} NOK
+                                </td>
+                                <td style={{ ...cell, textAlign: 'right' }}>
+                                    <button
+                                        className="btn btn-ghost"
+                                        style={{ color: 'var(--destructive)', padding: '0.4rem 0.6rem' }}
+                                        onClick={() => handleDelete(entry.id)}
+                                    >
                                         <Trash2 size={16} />
                                     </button>
                                 </td>
                             </tr>
                         ))}
                     </tbody>
-                    <tfoot className="bg-gray-50 border-t font-medium">
-                        <tr>
-                            <td colSpan={3} className="px-6 py-3 text-right">Totalt:</td>
-                            <td className="px-6 py-3 text-right">{totalHours} t</td>
-                            <td></td>
-                            <td className="px-6 py-3 text-right">{totalValue.toLocaleString()} kr</td>
-                            <td></td>
-                        </tr>
-                    </tfoot>
                 </table>
             </div>
 
             {isAdding && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-                    <div className="bg-white rounded-xl p-6 w-full max-w-md">
-                        <h3 className="text-lg font-bold mb-4">Registrer Timer</h3>
+                <div style={modalOverlay}>
+                    <div className="card" style={{ width: '100%', maxWidth: 620 }}>
+                        <h3 style={{ marginBottom: '1rem' }}>Ny timeforing</h3>
 
-                        <div className="space-y-4">
-                            <div className="flex gap-4">
-                                <div className="flex-1">
-                                    <label className="block text-sm font-medium mb-1">Dato</label>
+                        <div style={{ display: 'grid', gap: '0.9rem' }}>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                                <div>
+                                    <label style={labelStyle}>Dato</label>
                                     <input
+                                        style={inputStyle}
                                         type="date"
-                                        className="w-full border rounded-lg p-2"
-                                        value={newEntry.date}
-                                        onChange={e => setNewEntry({ ...newEntry, date: e.target.value })}
+                                        value={form.date || ''}
+                                        onChange={(event) => setForm({ ...form, date: event.target.value })}
                                     />
                                 </div>
-                                <div className="flex-1">
-                                    <label className="block text-sm font-medium mb-1">Deltaker</label>
+                                <div>
+                                    <label style={labelStyle}>Deltaker</label>
                                     <select
-                                        className="w-full border rounded-lg p-2"
-                                        value={newEntry.participantId}
-                                        onChange={e => handleParticipantChange(e.target.value)}
+                                        style={inputStyle}
+                                        value={form.participantId || ''}
+                                        onChange={(event) => handleParticipantChange(event.target.value)}
                                     >
-                                        {participants.map(p => (
-                                            <option key={p.id} value={p.id}>{p.name}</option>
+                                        {participants.map((participant) => (
+                                            <option key={participant.id} value={participant.id}>
+                                                {participant.name}
+                                            </option>
                                         ))}
                                     </select>
                                 </div>
                             </div>
 
-                            <div className="flex gap-4">
-                                <div className="w-1/2">
-                                    <label className="block text-sm font-medium mb-1">Antall Timer</label>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                                <div>
+                                    <label style={labelStyle}>Timer</label>
                                     <input
+                                        style={inputStyle}
                                         type="number"
-                                        className="w-full border rounded-lg p-2"
-                                        value={newEntry.hours}
-                                        onChange={e => setNewEntry({ ...newEntry, hours: Number(e.target.value) })}
+                                        min={0}
+                                        value={form.hours || 0}
+                                        onChange={(event) => setForm({ ...form, hours: Number(event.target.value) })}
                                     />
                                 </div>
-                                <div className="w-1/2">
-                                    <label className="block text-sm font-medium mb-1">Timesats</label>
+                                <div>
+                                    <label style={labelStyle}>Sats (NOK/t)</label>
                                     <input
+                                        style={inputStyle}
                                         type="number"
-                                        className="w-full border rounded-lg p-2"
-                                        value={newEntry.rate}
-                                        onChange={e => setNewEntry({ ...newEntry, rate: Number(e.target.value) })}
+                                        min={0}
+                                        value={form.rate || 0}
+                                        onChange={(event) => setForm({ ...form, rate: Number(event.target.value) })}
                                     />
                                 </div>
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium mb-1">Beskrivelse</label>
+                                <label style={labelStyle}>Beskrivelse</label>
                                 <input
-                                    className="w-full border rounded-lg p-2"
-                                    value={newEntry.description}
-                                    onChange={e => setNewEntry({ ...newEntry, description: e.target.value })}
-                                    placeholder="Maling, riving, administrasjon..."
+                                    style={inputStyle}
+                                    value={form.description || ''}
+                                    onChange={(event) => setForm({ ...form, description: event.target.value })}
+                                    placeholder="F.eks. sparkling, maling, administrasjon"
                                 />
                             </div>
 
-                            <div className="flex items-center gap-2">
+                            <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.9rem' }}>
                                 <input
                                     type="checkbox"
-                                    id="isBillable"
-                                    checked={newEntry.isBillable}
-                                    onChange={e => setNewEntry({ ...newEntry, isBillable: e.target.checked })}
+                                    checked={form.isBillable !== false}
+                                    onChange={(event) => setForm({ ...form, isBillable: event.target.checked })}
                                 />
-                                <label htmlFor="isBillable" className="text-sm">Fakturerbar (skal utbetales i oppgjøret)</label>
-                            </div>
+                                Fakturerbar i oppgjor
+                            </label>
                         </div>
 
-                        <div className="flex justify-end gap-2 mt-6">
-                            <button onClick={() => setIsAdding(false)} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg">Avbryt</button>
-                            <button onClick={handleAdd} className="px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800">Lagre</button>
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', marginTop: '1.2rem' }}>
+                            <button className="btn btn-ghost" onClick={() => setIsAdding(false)}>Avbryt</button>
+                            <button className="btn btn-primary" onClick={handleAdd}>Lagre</button>
                         </div>
                     </div>
                 </div>
@@ -217,3 +246,44 @@ export default function LaborTab({ projectId, labor, participants, onUpdate }: P
         </div>
     );
 }
+
+const headerCell: React.CSSProperties = {
+    padding: '0.85rem 1rem',
+    textAlign: 'left',
+    fontSize: '0.85rem',
+    color: 'var(--muted-foreground)',
+    fontWeight: 600
+};
+
+const cell: React.CSSProperties = {
+    padding: '0.85rem 1rem',
+    fontSize: '0.92rem'
+};
+
+const labelStyle: React.CSSProperties = {
+    display: 'block',
+    marginBottom: '0.35rem',
+    fontSize: '0.85rem',
+    color: 'var(--muted-foreground)'
+};
+
+const nonBillableStyle: React.CSSProperties = {
+    display: 'inline-block',
+    marginLeft: '0.45rem',
+    fontSize: '0.75rem',
+    padding: '0.1rem 0.45rem',
+    borderRadius: 999,
+    border: '1px solid var(--border)',
+    color: 'var(--muted-foreground)'
+};
+
+const modalOverlay: React.CSSProperties = {
+    position: 'fixed',
+    inset: 0,
+    backgroundColor: 'rgba(15, 23, 42, 0.45)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: '1rem',
+    zIndex: 50
+};

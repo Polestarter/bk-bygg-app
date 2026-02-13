@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { SettlementResult } from '@/lib/flip-types';
 import { ArrowDown } from 'lucide-react';
@@ -8,146 +8,176 @@ interface Props {
 }
 
 export default function SettlementTab({ result }: Props) {
-    if (!result) return <div className="p-4">Ingen beregning tilgjengelig.</div>;
+    if (!result) {
+        return (
+            <div className="card">
+                <p style={{ color: 'var(--muted-foreground)' }}>Ingen oppgjor beregnet enda.</p>
+            </div>
+        );
+    }
 
     const { netProceeds, waterfall, participants, externalCreditors } = result;
 
     return (
-        <div className="max-w-4xl space-y-8">
-            <h2 className="text-2xl font-bold">Endelig Oppgjør (Waterfall)</h2>
-
-            {/* Waterfall Steps Visual */}
-            <div className="space-y-4">
-                {/* Step 0: Net Proceeds */}
-                <div className="bg-green-50 border border-green-200 p-4 rounded-xl flex justify-between items-center">
-                    <div>
-                        <h3 className="font-bold text-green-800">Start: Nettoproveny</h3>
-                        <p className="text-sm text-green-600">Tilgjengelig for fordeling etter salgskostnader</p>
-                    </div>
-                    <div className="text-xl font-bold text-green-800">{netProceeds.toLocaleString()} NOK</div>
-                </div>
-
-                <div className="flex justify-center"><ArrowDown className="text-gray-300" /></div>
-
-                {/* Step 1: Prio 1 */}
-                <div className="bg-white border p-4 rounded-xl">
-                    <div className="flex justify-between items-center mb-2">
-                        <h3 className="font-bold">1. Private Lån & Innskudd (Prio 1)</h3>
-                        <div className="text-sm font-medium">
-                            <span className="text-gray-500">Krav: {waterfall.step1_privateLoans.total.toLocaleString()}</span>
-                            <span className="mx-2">→</span>
-                            <span className="text-black">Betalt: {waterfall.step1_privateLoans.paid.toLocaleString()}</span>
-                        </div>
-                    </div>
-                    {waterfall.step1_privateLoans.remaining > 0 && (
-                        <div className="text-xs text-red-500 font-medium bg-red-50 px-2 py-1 rounded inline-block">
-                            Manglende dekning: {waterfall.step1_privateLoans.remaining.toLocaleString()}
-                        </div>
-                    )}
-                </div>
-
-                <div className="flex justify-center"><ArrowDown className="text-gray-300" /></div>
-
-                {/* Step 2: Prio 2 */}
-                <div className="bg-white border p-4 rounded-xl">
-                    <div className="flex justify-between items-center mb-2">
-                        <h3 className="font-bold">2. Andre Lån / Eksterne (Prio 2)</h3>
-                        <div className="text-sm font-medium">
-                            <span className="text-gray-500">Krav: {waterfall.step2_otherLoans.total.toLocaleString()}</span>
-                            <span className="mx-2">→</span>
-                            <span className="text-black">Betalt: {waterfall.step2_otherLoans.paid.toLocaleString()}</span>
-                        </div>
-                    </div>
-                    {externalCreditors.map((c, i) => (
-                        <div key={i} className="text-sm flex justify-between text-gray-600 border-t pt-1 mt-1">
-                            <span>{c.name} ({c.type})</span>
-                            <span>{c.amountPaid.toLocaleString()} / {c.amountOwed.toLocaleString()}</span>
-                        </div>
-                    ))}
-                    {waterfall.step2_otherLoans.remaining > 0 && (
-                        <div className="text-xs text-red-500 mt-2">
-                            Prio 2 ikke fullt dekket! Eierne må dekke {waterfall.step2_otherLoans.remaining.toLocaleString()}.
-                        </div>
-                    )}
-                </div>
-
-                <div className="flex justify-center"><ArrowDown className="text-gray-300" /></div>
-
-                {/* Step 3: Labor */}
-                <div className="bg-white border p-4 rounded-xl">
-                    <div className="flex justify-between items-center mb-2">
-                        <h3 className="font-bold">3. Arbeidstimer (Prio 3)</h3>
-                        <div className="text-sm font-medium">
-                            <span className="text-gray-500">Krav: {waterfall.step3_labor.total.toLocaleString()}</span>
-                            <span className="mx-2">→</span>
-                            <span className="text-black">Betalt: {waterfall.step3_labor.paid.toLocaleString()}</span>
-                        </div>
-                    </div>
-                </div>
-
-                <div className="flex justify-center"><ArrowDown className="text-gray-300" /></div>
-
-                {/* Step 4: Equity */}
-                <div className="bg-blue-50 border border-blue-200 p-4 rounded-xl flex justify-between items-center">
-                    <div>
-                        <h3 className="font-bold text-blue-900">4. Resterende Overskudd (Equity)</h3>
-                        <p className="text-sm text-blue-700">Fordeles etter eierbrøk</p>
-                    </div>
-                    <div className="text-xl font-bold text-blue-900">{waterfall.step4_equity.pool.toLocaleString()} NOK</div>
-                </div>
+        <div style={{ display: 'grid', gap: '1rem' }}>
+            <div>
+                <h2 style={{ fontSize: '1.25rem' }}>Oppgjor</h2>
+                <p style={{ color: 'var(--muted-foreground)', fontSize: '0.9rem' }}>
+                    Fordeling skjer i prioritert rekkefolge fra nettoproveny.
+                </p>
             </div>
 
-            {/* Final Report Table */}
-            <div className="mt-8">
-                <h3 className="text-xl font-bold mb-4">Utbetalingsoversikt</h3>
-                <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
-                    <table className="w-full text-sm">
-                        <thead className="bg-gray-800 text-white">
-                            <tr>
-                                <th className="px-6 py-4 text-left">Deltaker</th>
-                                <th className="px-6 py-4 text-right">Utlegg (Refusjon)</th>
-                                <th className="px-6 py-4 text-right">Lån (Tilbakebetaling)</th>
-                                <th className="px-6 py-4 text-right">Timer (Lønn)</th>
-                                <th className="px-6 py-4 text-right">Overskudd (Andel)</th>
-                                <th className="px-6 py-4 text-right bg-black text-white font-bold">TOTALT UT</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-gray-100">
-                            {participants.map(p => (
-                                <tr key={p.participantId}>
-                                    <td className="px-6 py-4 font-bold">{p.name} ({p.ownershipShare}%)</td>
-                                    <td className="px-6 py-4 text-right">{Math.round(p.reimbursementExpenses).toLocaleString()}</td>
-                                    <td className="px-6 py-4 text-right">{Math.round(p.reimbursementLoans).toLocaleString()}</td>
-                                    <td className="px-6 py-4 text-right">{Math.round(p.payoutLabor).toLocaleString()}</td>
-                                    <td className="px-6 py-4 text-right">{Math.round(p.payoutEquity).toLocaleString()}</td>
-                                    <td className="px-6 py-4 text-right font-bold bg-gray-50">{Math.round(p.totalPayout).toLocaleString()}</td>
-                                </tr>
+            <div style={{ display: 'grid', gap: '0.6rem' }}>
+                <StepCard
+                    title="Start: nettoproveny"
+                    subtitle="Belop tilgjengelig etter salgskostnader"
+                    right={`${Math.round(netProceeds).toLocaleString()} NOK`}
+                    accent="#166534"
+                    background="#dcfce7"
+                />
+
+                <ArrowBreak />
+
+                <StepCard
+                    title="1. Private lan og innskudd (prio 1)"
+                    subtitle={`Krav ${Math.round(waterfall.step1_privateLoans.total).toLocaleString()} NOK, betalt ${Math.round(waterfall.step1_privateLoans.paid).toLocaleString()} NOK`}
+                    right={`Rest ${Math.round(waterfall.step1_privateLoans.remaining).toLocaleString()} NOK`}
+                />
+
+                <ArrowBreak />
+
+                <div className="card" style={{ padding: '0.95rem 1rem' }}>
+                    <div className="flex-between" style={{ gap: '0.75rem', flexWrap: 'wrap' }}>
+                        <div>
+                            <h3 style={{ fontSize: '1rem' }}>2. Eksterne lan (prio 2)</h3>
+                            <p style={{ color: 'var(--muted-foreground)', fontSize: '0.85rem' }}>
+                                Krav {Math.round(waterfall.step2_otherLoans.total).toLocaleString()} NOK, betalt {Math.round(waterfall.step2_otherLoans.paid).toLocaleString()} NOK
+                            </p>
+                        </div>
+                        <strong style={{ fontSize: '0.95rem' }}>
+                            Rest {Math.round(waterfall.step2_otherLoans.remaining).toLocaleString()} NOK
+                        </strong>
+                    </div>
+
+                    {externalCreditors.length > 0 && (
+                        <div style={{ marginTop: '0.8rem', borderTop: '1px solid var(--border)' }}>
+                            {externalCreditors.map((creditor) => (
+                                <div
+                                    key={`${creditor.name}-${creditor.type}`}
+                                    className="flex-between"
+                                    style={{ paddingTop: '0.55rem', fontSize: '0.88rem', color: 'var(--muted-foreground)' }}
+                                >
+                                    <span>{creditor.name} ({creditor.type})</span>
+                                    <span>
+                                        {Math.round(creditor.amountPaid).toLocaleString()} / {Math.round(creditor.amountOwed).toLocaleString()} NOK
+                                    </span>
+                                </div>
                             ))}
-                        </tbody>
-                    </table>
+                        </div>
+                    )}
                 </div>
 
-                {/* Net Position */}
-                <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {participants.map(p => (
-                        <div key={p.participantId} className={`p-4 rounded-xl border ${p.balance >= 0 ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
-                            <h4 className="font-bold mb-2">{p.name} - Netto Resultat</h4>
-                            <div className="flex justify-between text-sm mb-1">
-                                <span>Totalt Mottatt:</span>
-                                <span>{Math.round(p.totalPayout).toLocaleString()}</span>
-                            </div>
-                            <div className="flex justify-between text-sm mb-1 text-gray-500">
-                                <span>Investert (Utlegg + Lån):</span>
-                                <span>- {(p.totalExpensesPaid + p.totalLoansProvided).toLocaleString()}</span>
-                            </div>
-                            <div className={`mt-2 pt-2 border-t font-bold text-lg ${p.balance >= 0 ? 'text-green-700' : 'text-red-700'}`}>
-                                {p.balance >= 0 ? 'Gevinst: ' : 'Tap/Utlegg: '}
-                                {Math.round(p.balance).toLocaleString()}
-                            </div>
-                        </div>
-                    ))}
-                </div>
+                <ArrowBreak />
+
+                <StepCard
+                    title="3. Arbeidstimer (prio 3)"
+                    subtitle={`Krav ${Math.round(waterfall.step3_labor.total).toLocaleString()} NOK, betalt ${Math.round(waterfall.step3_labor.paid).toLocaleString()} NOK`}
+                    right={`Rest ${Math.round(waterfall.step3_labor.remaining).toLocaleString()} NOK`}
+                />
+
+                <ArrowBreak />
+
+                <StepCard
+                    title="4. Overskudd etter eierandel"
+                    subtitle="Resterende belop fordeles pa eiere"
+                    right={`${Math.round(waterfall.step4_equity.pool).toLocaleString()} NOK`}
+                    accent="#1d4ed8"
+                    background="#dbeafe"
+                />
+            </div>
+
+            <div className="card" style={{ overflowX: 'auto', padding: 0 }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 980 }}>
+                    <thead>
+                        <tr style={{ backgroundColor: 'var(--secondary)' }}>
+                            <th style={headerCell}>Deltaker</th>
+                            <th style={{ ...headerCell, textAlign: 'right' }}>Refusjon utlegg</th>
+                            <th style={{ ...headerCell, textAlign: 'right' }}>Tilbakebetaling lan</th>
+                            <th style={{ ...headerCell, textAlign: 'right' }}>Utbetaling timer</th>
+                            <th style={{ ...headerCell, textAlign: 'right' }}>Andel overskudd</th>
+                            <th style={{ ...headerCell, textAlign: 'right' }}>Totalt ut</th>
+                            <th style={{ ...headerCell, textAlign: 'right' }}>Netto</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {participants.map((participant) => (
+                            <tr key={participant.participantId} style={{ borderTop: '1px solid var(--border)' }}>
+                                <td style={cell}>
+                                    <strong>{participant.name}</strong>
+                                    <div style={{ color: 'var(--muted-foreground)', fontSize: '0.8rem' }}>
+                                        {participant.ownershipShare}% eierandel
+                                    </div>
+                                </td>
+                                <td style={{ ...cell, textAlign: 'right' }}>{Math.round(participant.reimbursementExpenses).toLocaleString()} NOK</td>
+                                <td style={{ ...cell, textAlign: 'right' }}>{Math.round(participant.reimbursementLoans).toLocaleString()} NOK</td>
+                                <td style={{ ...cell, textAlign: 'right' }}>{Math.round(participant.payoutLabor).toLocaleString()} NOK</td>
+                                <td style={{ ...cell, textAlign: 'right' }}>{Math.round(participant.payoutEquity).toLocaleString()} NOK</td>
+                                <td style={{ ...cell, textAlign: 'right', fontWeight: 700 }}>{Math.round(participant.totalPayout).toLocaleString()} NOK</td>
+                                <td style={{ ...cell, textAlign: 'right', fontWeight: 700, color: participant.balance >= 0 ? '#166534' : 'var(--destructive)' }}>
+                                    {Math.round(participant.balance).toLocaleString()} NOK
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
             </div>
         </div>
     );
 }
+
+function ArrowBreak() {
+    return (
+        <div style={{ display: 'flex', justifyContent: 'center', color: 'var(--muted-foreground)' }}>
+            <ArrowDown size={16} />
+        </div>
+    );
+}
+
+function StepCard({
+    title,
+    subtitle,
+    right,
+    accent,
+    background
+}: {
+    title: string;
+    subtitle: string;
+    right: string;
+    accent?: string;
+    background?: string;
+}) {
+    return (
+        <div className="card" style={{ padding: '0.95rem 1rem', backgroundColor: background || 'var(--card)' }}>
+            <div className="flex-between" style={{ gap: '0.75rem', flexWrap: 'wrap' }}>
+                <div>
+                    <h3 style={{ fontSize: '1rem', color: accent || 'var(--foreground)' }}>{title}</h3>
+                    <p style={{ color: 'var(--muted-foreground)', fontSize: '0.85rem' }}>{subtitle}</p>
+                </div>
+                <strong style={{ fontSize: '0.95rem', color: accent || 'var(--foreground)' }}>{right}</strong>
+            </div>
+        </div>
+    );
+}
+
+const headerCell: React.CSSProperties = {
+    padding: '0.85rem 1rem',
+    textAlign: 'left',
+    fontSize: '0.85rem',
+    color: 'var(--muted-foreground)',
+    fontWeight: 600
+};
+
+const cell: React.CSSProperties = {
+    padding: '0.85rem 1rem',
+    fontSize: '0.9rem'
+};

@@ -1,20 +1,20 @@
-'use client';
+﻿'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { getFlipProjects, addFlipProject } from '@/lib/flip-db';
+import { addFlipProject, getFlipProjects } from '@/lib/flip-db';
 import { FlipProject } from '@/lib/flip-types';
-import { Plus, Search, Calendar, ArrowRight, TrendingUp } from 'lucide-react';
+import { Plus, Search, TrendingUp } from 'lucide-react';
 
 export default function FlipListPage() {
     const [projects, setProjects] = useState<FlipProject[]>([]);
     const [loading, setLoading] = useState(true);
-    const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+    const [isCreateOpen, setIsCreateOpen] = useState(false);
     const [newProjectName, setNewProjectName] = useState('');
-    const [search, setSearch] = useState("");
+    const [search, setSearch] = useState('');
 
     useEffect(() => {
-        loadProjects();
+        void loadProjects();
     }, []);
 
     const loadProjects = async () => {
@@ -25,116 +25,107 @@ export default function FlipListPage() {
     };
 
     const handleCreate = async () => {
-        if (!newProjectName) return;
+        const name = newProjectName.trim();
+        if (!name) return;
 
-        const newProj: Partial<FlipProject> = {
-            name: newProjectName,
+        await addFlipProject({
+            name,
             startDate: new Date().toISOString().split('T')[0],
             status: 'Planlagt',
             enableLaborPayout: true,
             laborDefaultRate: 500,
             treatCompanyPaymentsAsLoan: true,
             allowNegativeProfitSettlement: true,
-            roundingMode: 'nearest'
-        };
+            roundingMode: 'nearest',
+            currency: 'NOK'
+        });
 
-        await addFlipProject(newProj);
         setNewProjectName('');
-        setIsCreateModalOpen(false);
-        loadProjects();
+        setIsCreateOpen(false);
+        await loadProjects();
     };
 
-    const filteredProjects = projects.filter(p =>
-        p.name.toLowerCase().includes(search.toLowerCase()) ||
-        (p.address && p.address.toLowerCase().includes(search.toLowerCase()))
+    const filteredProjects = useMemo(
+        () => projects.filter((project) => {
+            const query = search.toLowerCase();
+            return project.name.toLowerCase().includes(query) || project.address?.toLowerCase().includes(query);
+        }),
+        [projects, search]
     );
 
     return (
-        <main className="container" style={{ paddingTop: "2rem", paddingBottom: "4rem" }}>
-            <div className="flex-between" style={{ marginBottom: "2rem" }}>
+        <main className="container" style={{ paddingTop: '2rem', paddingBottom: '4rem' }}>
+            <div className="flex-between" style={{ marginBottom: '2rem', gap: '1rem', flexWrap: 'wrap' }}>
                 <div>
-                    <h1>FlippeOppgjør</h1>
-                    <p style={{ color: "var(--muted-foreground)" }}>Oversikt over flippe-prosjekter og oppgjør</p>
+                    <h1 style={{ marginBottom: '0.35rem' }}>Flipoppgjor</h1>
+                    <p style={{ color: 'var(--muted-foreground)' }}>
+                        Oversikt over prosjekter for kjop, oppussing og salg.
+                    </p>
                 </div>
-                <button
-                    onClick={() => setIsCreateModalOpen(true)}
-                    className="btn btn-primary"
-                    style={{ gap: "0.5rem" }}
-                >
-                    <Plus size={18} /> Nytt Prosjekt
+
+                <button className="btn btn-primary" style={{ gap: '0.5rem' }} onClick={() => setIsCreateOpen(true)}>
+                    <Plus size={18} /> Nytt prosjekt
                 </button>
             </div>
 
-            {/* Filters */}
-            <div style={{ marginBottom: "2rem" }}>
-                <div style={{ position: "relative" }}>
-                    <input
-                        type="text"
-                        placeholder="Søk i flippe-prosjekter..."
-                        value={search}
-                        onChange={(e) => setSearch(e.target.value)}
-                        style={{
-                            width: "100%",
-                            padding: "0.75rem 1rem 0.75rem 2.5rem",
-                            borderRadius: "var(--radius)",
-                            border: "1px solid var(--border)",
-                            backgroundColor: "var(--input)",
-                            color: "var(--foreground)",
-                            fontSize: "1rem"
-                        }}
-                    />
-                    <Search size={18} style={{ position: "absolute", left: "1rem", top: "50%", transform: "translateY(-50%)", color: "var(--muted-foreground)" }} />
-                </div>
+            <div style={{ marginBottom: '1.5rem', position: 'relative' }}>
+                <input
+                    type="text"
+                    placeholder="Sok i flipprosjekter"
+                    value={search}
+                    onChange={(event) => setSearch(event.target.value)}
+                    style={{
+                        width: '100%',
+                        padding: '0.72rem 1rem 0.72rem 2.5rem',
+                        borderRadius: 'var(--radius)',
+                        border: '1px solid var(--border)',
+                        backgroundColor: 'var(--card)',
+                        color: 'var(--foreground)'
+                    }}
+                />
+                <Search
+                    size={17}
+                    style={{
+                        position: 'absolute',
+                        left: '0.9rem',
+                        top: '50%',
+                        transform: 'translateY(-50%)',
+                        color: 'var(--muted-foreground)'
+                    }}
+                />
             </div>
 
             {loading ? (
-                <p>Laster prosjekter...</p>
+                <div className="card">
+                    <p style={{ color: 'var(--muted-foreground)' }}>Laster prosjekter...</p>
+                </div>
             ) : (
-                <div style={{ display: "grid", gap: "1rem" }}>
+                <div style={{ display: 'grid', gap: '0.8rem' }}>
                     {filteredProjects.length === 0 ? (
-                        <div className="card" style={{ padding: "2rem", textAlign: "center", color: "var(--muted-foreground)" }}>
-                            Ingen prosjekter funnet.
+                        <div className="card" style={{ textAlign: 'center' }}>
+                            <p style={{ color: 'var(--muted-foreground)' }}>Ingen prosjekter funnet.</p>
                         </div>
                     ) : (
-                        filteredProjects.map(project => (
-                            <Link key={project.id} href={`/flip/details?id=${project.id}`} style={{ textDecoration: "none" }}>
-                                <div className="card flex-between card-interactive">
-                                    <div style={{ display: "flex", gap: "1.5rem", alignItems: "center" }}>
-                                        <div style={{
-                                            width: "56px", height: "56px",
-                                            borderRadius: "var(--radius)",
-                                            backgroundColor: "var(--secondary)",
-                                            display: "flex", alignItems: "center", justifyContent: "center",
-                                            color: "var(--secondary-foreground)"
-                                        }}>
-                                            <TrendingUp size={24} />
+                        filteredProjects.map((project) => (
+                            <Link key={project.id} href={`/flip/details?id=${project.id}`}>
+                                <div className="card card-interactive flex-between" style={{ gap: '1rem', flexWrap: 'wrap' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.9rem' }}>
+                                        <div style={iconBox}>
+                                            <TrendingUp size={21} />
                                         </div>
                                         <div>
-                                            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                                                <h3 style={{ fontSize: "1.25rem", margin: 0 }}>{project.name}</h3>
-                                            </div>
-                                            <p style={{ color: "var(--muted-foreground)", margin: 0 }}>{project.address || 'Ingen adresse'}</p>
+                                            <h3 style={{ fontSize: '1.1rem' }}>{project.name}</h3>
+                                            <p style={{ color: 'var(--muted-foreground)', fontSize: '0.88rem' }}>
+                                                {project.address || 'Ingen adresse'}
+                                            </p>
                                         </div>
                                     </div>
 
-                                    <div style={{ display: "flex", gap: "2rem", alignItems: "center", flexWrap: "wrap", justifyContent: "flex-end" }}>
-                                        <div className="hide-on-mobile" style={{ textAlign: "right" }}>
-                                            <p style={{ fontSize: "0.875rem", color: "var(--muted-foreground)", margin: 0 }}>Oppstart</p>
-                                            <p style={{ fontWeight: "500", margin: 0 }}>{project.startDate}</p>
-                                        </div>
-                                        <div style={{ textAlign: "right" }}>
-                                            <span style={{
-                                                padding: "0.25rem 0.75rem",
-                                                borderRadius: "99px",
-                                                backgroundColor: project.status === "Aktiv" ? "rgba(163, 230, 53, 0.2)" : "var(--secondary)",
-                                                color: project.status === "Aktiv" ? "var(--primary-foreground)" : "var(--foreground)",
-                                                border: project.status === "Aktiv" ? "1px solid var(--primary)" : "1px solid transparent",
-                                                fontSize: "0.875rem",
-                                                fontWeight: "500"
-                                            }}>
-                                                {project.status}
-                                            </span>
-                                        </div>
+                                    <div style={{ textAlign: 'right' }}>
+                                        <span style={project.status === 'Aktiv' ? activeBadge : badgeStyle}>{project.status}</span>
+                                        <p style={{ color: 'var(--muted-foreground)', fontSize: '0.82rem', marginTop: '0.4rem' }}>
+                                            Start {project.startDate}
+                                        </p>
                                     </div>
                                 </div>
                             </Link>
@@ -143,29 +134,22 @@ export default function FlipListPage() {
                 </div>
             )}
 
-            {/* Create Modal - using inline styles to avoid external dependencies or complexity */}
-            {isCreateModalOpen && (
-                <div style={{
-                    position: "fixed", inset: 0, backgroundColor: "rgba(0,0,0,0.5)",
-                    display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100
-                }}>
-                    <div className="card" style={{ width: "100%", maxWidth: "400px" }}>
-                        <h2 style={{ marginBottom: "1rem" }}>Nytt Prosjekt</h2>
-                        <div style={{ marginBottom: "1.5rem" }}>
-                            <label style={{ display: "block", marginBottom: "0.5rem", fontSize: "0.875rem", fontWeight: "500" }}>Prosjektnavn</label>
-                            <input
-                                type="text"
-                                style={{
-                                    width: "100%", padding: "0.5rem", borderRadius: "var(--radius)",
-                                    border: "1px solid var(--border)", backgroundColor: "var(--input)"
-                                }}
-                                value={newProjectName}
-                                onChange={(e) => setNewProjectName(e.target.value)}
-                            />
-                        </div>
-                        <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.5rem" }}>
-                            <button onClick={() => setIsCreateModalOpen(false)} className="btn btn-ghost">Avbryt</button>
-                            <button onClick={handleCreate} className="btn btn-primary">Opprett</button>
+            {isCreateOpen && (
+                <div style={modalOverlay}>
+                    <div className="card" style={{ width: '100%', maxWidth: 460 }}>
+                        <h2 style={{ marginBottom: '0.8rem' }}>Nytt flipprosjekt</h2>
+                        <label style={labelStyle}>Prosjektnavn</label>
+                        <input
+                            type="text"
+                            style={inputStyle}
+                            value={newProjectName}
+                            onChange={(event) => setNewProjectName(event.target.value)}
+                            placeholder="F.eks. Gamleveien 12"
+                        />
+
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', marginTop: '1rem' }}>
+                            <button className="btn btn-ghost" onClick={() => setIsCreateOpen(false)}>Avbryt</button>
+                            <button className="btn btn-primary" onClick={handleCreate}>Opprett</button>
                         </div>
                     </div>
                 </div>
@@ -173,3 +157,58 @@ export default function FlipListPage() {
         </main>
     );
 }
+
+const iconBox: React.CSSProperties = {
+    width: '46px',
+    height: '46px',
+    borderRadius: 'var(--radius)',
+    border: '1px solid var(--border)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    color: 'var(--muted-foreground)',
+    backgroundColor: 'var(--background)'
+};
+
+const badgeStyle: React.CSSProperties = {
+    padding: '0.18rem 0.6rem',
+    borderRadius: 999,
+    border: '1px solid var(--border)',
+    backgroundColor: 'var(--secondary)',
+    fontSize: '0.8rem',
+    fontWeight: 600
+};
+
+const activeBadge: React.CSSProperties = {
+    ...badgeStyle,
+    borderColor: '#86efac',
+    color: '#166534',
+    backgroundColor: '#dcfce7'
+};
+
+const labelStyle: React.CSSProperties = {
+    display: 'block',
+    marginBottom: '0.35rem',
+    fontSize: '0.85rem',
+    color: 'var(--muted-foreground)'
+};
+
+const inputStyle: React.CSSProperties = {
+    width: '100%',
+    padding: '0.62rem 0.75rem',
+    borderRadius: 'var(--radius)',
+    border: '1px solid var(--border)',
+    backgroundColor: 'var(--background)',
+    color: 'var(--foreground)'
+};
+
+const modalOverlay: React.CSSProperties = {
+    position: 'fixed',
+    inset: 0,
+    backgroundColor: 'rgba(15, 23, 42, 0.45)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: '1rem',
+    zIndex: 50
+};

@@ -1,11 +1,26 @@
-'use client';
+﻿'use client';
 
-import { useState, useEffect, Suspense } from 'react';
+import { Suspense, useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { getFlipProject, getFlipParticipants, getFlipExpenses, getFlipLoans, getFlipLabor, getFlipSale } from '@/lib/flip-db';
+import {
+    getFlipProject,
+    getFlipParticipants,
+    getFlipExpenses,
+    getFlipLoans,
+    getFlipLabor,
+    getFlipSale
+} from '@/lib/flip-db';
 import { calculateFlipSettlement } from '@/lib/flip-calculations';
-import { FlipProject, FlipParticipant, FlipExpense, FlipLoan, FlipLaborEntry, FlipSale, SettlementResult } from '@/lib/flip-types';
-import { ArrowLeft, Users, Receipt, Banknote, Clock, Gavel, FileText } from 'lucide-react';
+import {
+    FlipExpense,
+    FlipLaborEntry,
+    FlipLoan,
+    FlipParticipant,
+    FlipProject,
+    FlipSale,
+    SettlementResult
+} from '@/lib/flip-types';
+import { ArrowLeft, Banknote, Clock3, FileText, Gavel, Receipt, Users } from 'lucide-react';
 
 import ParticipantsTab from '@/components/flip/ParticipantsTab';
 import ExpensesTab from '@/components/flip/ExpensesTab';
@@ -13,6 +28,8 @@ import LoansTab from '@/components/flip/LoansTab';
 import LaborTab from '@/components/flip/LaborTab';
 import SaleTab from '@/components/flip/SaleTab';
 import SettlementTab from '@/components/flip/SettlementTab';
+
+type TabId = 'overview' | 'participants' | 'expenses' | 'loans' | 'labor' | 'sale';
 
 function FlipProjectContent() {
     const searchParams = useSearchParams();
@@ -27,19 +44,21 @@ function FlipProjectContent() {
     const [sale, setSale] = useState<FlipSale | undefined>(undefined);
     const [settlement, setSettlement] = useState<SettlementResult | null>(null);
     const [loading, setLoading] = useState(true);
-    const [activeTab, setActiveTab] = useState<'overview' | 'participants' | 'expenses' | 'loans' | 'labor' | 'sale'>('overview');
+    const [activeTab, setActiveTab] = useState<TabId>('overview');
 
     useEffect(() => {
-        if (id) {
-            loadData(id);
-        } else {
+        if (!id) {
             setLoading(false);
+            return;
         }
+
+        void loadData(id);
     }, [id]);
 
     const loadData = async (projectId: string) => {
         setLoading(true);
-        const [p, parts, exps, lns, lab, sl] = await Promise.all([
+
+        const [projectData, participantData, expenseData, loanData, laborData, saleData] = await Promise.all([
             getFlipProject(projectId),
             getFlipParticipants(projectId),
             getFlipExpenses(projectId),
@@ -48,143 +67,155 @@ function FlipProjectContent() {
             getFlipSale(projectId)
         ]);
 
-        if (p) {
-            setProject(p);
-            setParticipants(parts);
-            setExpenses(exps);
-            setLoans(lns);
-            setLabor(lab);
-            setSale(sl);
-            const res = calculateFlipSettlement(p, parts, exps, lns, lab, sl);
-            setSettlement(res);
+        if (projectData) {
+            setProject(projectData);
+            setParticipants(participantData);
+            setExpenses(expenseData);
+            setLoans(loanData);
+            setLabor(laborData);
+            setSale(saleData);
+            setSettlement(calculateFlipSettlement(projectData, participantData, expenseData, loanData, laborData, saleData));
         }
+
         setLoading(false);
     };
 
-    if (loading) return <main className="container" style={{ paddingTop: "2rem" }}><p>Laster...</p></main>;
-    if (!id || !project) return <main className="container" style={{ paddingTop: "2rem" }}><p>Fant ikke prosjektet.</p></main>;
+    const summary = useMemo(() => {
+        const saleAmount = sale?.grossSalePrice || 0;
+        const loanAmount = loans.reduce((sum, loan) => sum + loan.principalAmount, 0);
+        const expenseAmount = expenses.reduce((sum, expense) => sum + expense.amount, 0);
+        const laborHours = labor.reduce((sum, entry) => sum + entry.hours, 0);
+
+        return {
+            saleAmount,
+            loanAmount,
+            expenseAmount,
+            laborHours,
+            net: settlement?.netProceeds || 0
+        };
+    }, [sale, loans, expenses, labor, settlement]);
+
+    if (loading) {
+        return (
+            <main className="container" style={{ paddingTop: '2rem' }}>
+                <div className="card">
+                    <p style={{ color: 'var(--muted-foreground)' }}>Laster prosjekt ...</p>
+                </div>
+            </main>
+        );
+    }
+
+    if (!id || !project) {
+        return (
+            <main className="container" style={{ paddingTop: '2rem' }}>
+                <div className="card">
+                    <p style={{ color: 'var(--muted-foreground)' }}>Fant ikke prosjektet.</p>
+                </div>
+            </main>
+        );
+    }
 
     const handleUpdate = () => {
-        if (id) loadData(id);
+        if (!id) return;
+        void loadData(id);
     };
 
-    const TabButton = ({ id, label, icon: Icon }: { id: typeof activeTab, label: string, icon: any }) => (
-        <button
-            onClick={() => setActiveTab(id)}
-            style={{
-                display: "flex", alignItems: "center", gap: "0.5rem",
-                padding: "0.75rem 1rem",
-                borderBottom: activeTab === id ? "2px solid var(--primary)" : "2px solid transparent",
-                color: activeTab === id ? "var(--foreground)" : "var(--muted-foreground)",
-                fontWeight: "500",
-                background: "none", borderLeft: "none", borderRight: "none", borderTop: "none",
-                cursor: "pointer", fontSize: "0.9rem"
-            }}
-        >
-            <Icon size={16} />
-            {label}
-        </button>
-    );
-
     return (
-        <main className="container" style={{ paddingTop: "2rem", paddingBottom: "4rem" }}>
-            <div style={{ marginBottom: "2rem" }}>
+        <main className="container" style={{ paddingTop: '2rem', paddingBottom: '4rem' }}>
+            <div style={{ marginBottom: '1.5rem' }}>
                 <button
                     onClick={() => router.push('/flip')}
-                    style={{
-                        display: "flex", alignItems: "center", gap: "0.5rem",
-                        color: "var(--muted-foreground)", background: "none",
-                        border: "none", cursor: "pointer", marginBottom: "1rem"
-                    }}
+                    className="btn btn-ghost"
+                    style={{ paddingLeft: 0, color: 'var(--muted-foreground)', gap: '0.45rem' }}
                 >
                     <ArrowLeft size={16} /> Tilbake til oversikt
                 </button>
-                <div className="flex-between">
-                    <div>
-                        <h1 style={{ marginBottom: "0.25rem" }}>{project.name}</h1>
-                        <span style={{
-                            fontSize: "0.875rem", padding: "2px 8px", borderRadius: "4px",
-                            backgroundColor: "var(--secondary)", color: "var(--secondary-foreground)"
-                        }}>
-                            {project.status}
-                        </span>
-                    </div>
-                    <div style={{ textAlign: "right" }}>
-                        <p style={{ fontSize: "0.875rem", color: "var(--muted-foreground)" }}>Netto Resultat</p>
-                        <p style={{ fontSize: "1.5rem", fontWeight: "bold", color: (settlement?.netProceeds || 0) > 0 ? "var(--primary-foreground)" : "var(--foreground)" }}>
-                            {(settlement?.netProceeds || 0).toLocaleString()} NOK
-                        </p>
-                    </div>
+            </div>
+
+            <div className="flex-between" style={{ marginBottom: '1.2rem', gap: '1rem', flexWrap: 'wrap' }}>
+                <div>
+                    <h1 style={{ marginBottom: '0.25rem' }}>{project.name}</h1>
+                    <span style={project.status === 'Aktiv' ? activeBadge : badgeStyle}>{project.status}</span>
+                </div>
+
+                <div style={{ textAlign: 'right' }}>
+                    <p style={{ color: 'var(--muted-foreground)', fontSize: '0.85rem' }}>Nettoproveny</p>
+                    <p style={{ fontSize: '1.5rem', fontWeight: 700, color: summary.net >= 0 ? '#166534' : 'var(--destructive)' }}>
+                        {Math.round(summary.net).toLocaleString()} NOK
+                    </p>
                 </div>
             </div>
 
-            {/* Tabs */}
-            <div style={{
-                display: "flex", gap: "0.5rem", borderBottom: "1px solid var(--border)",
-                marginBottom: "2rem", overflowX: "auto"
-            }}>
-                <TabButton id="overview" label="Oversikt" icon={FileText} />
-                <TabButton id="participants" label="Deltakere" icon={Users} />
-                <TabButton id="expenses" label="Utlegg" icon={Receipt} />
-                <TabButton id="loans" label="Lån" icon={Banknote} />
-                <TabButton id="labor" label="Timer" icon={Clock} />
-                <TabButton id="sale" label="Salg & Oppgjør" icon={Gavel} />
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0.75rem', marginBottom: '1.2rem' }}>
+                <StatCard label="Salg" value={`${Math.round(summary.saleAmount).toLocaleString()} NOK`} />
+                <StatCard label="Utlegg" value={`${Math.round(summary.expenseAmount).toLocaleString()} NOK`} />
+                <StatCard label="Lan" value={`${Math.round(summary.loanAmount).toLocaleString()} NOK`} />
+                <StatCard label="Timer" value={`${summary.laborHours.toLocaleString()} t`} />
             </div>
 
-            {/* Content */}
+            <div style={{ display: 'flex', gap: '0.45rem', borderBottom: '1px solid var(--border)', marginBottom: '1.2rem', overflowX: 'auto' }}>
+                <TabButton id="overview" label="Oversikt" activeTab={activeTab} onChange={setActiveTab} icon={FileText} />
+                <TabButton id="participants" label="Deltakere" activeTab={activeTab} onChange={setActiveTab} icon={Users} />
+                <TabButton id="expenses" label="Utlegg" activeTab={activeTab} onChange={setActiveTab} icon={Receipt} />
+                <TabButton id="loans" label="Lan" activeTab={activeTab} onChange={setActiveTab} icon={Banknote} />
+                <TabButton id="labor" label="Timer" activeTab={activeTab} onChange={setActiveTab} icon={Clock3} />
+                <TabButton id="sale" label="Salg og oppgjor" activeTab={activeTab} onChange={setActiveTab} icon={Gavel} />
+            </div>
+
             <div>
                 {activeTab === 'overview' && (
-                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: "1.5rem" }}>
+                    <div style={{ display: 'grid', gap: '0.9rem', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))' }}>
                         <div className="card">
-                            <h3 style={{ marginBottom: "1rem", fontSize: "1.1rem" }}>Økonomisk Sammendrag</h3>
-                            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.5rem" }}>
-                                <span style={{ color: "var(--muted-foreground)" }}>Salgssum</span>
-                                <span>{(sale?.grossSalePrice || 0).toLocaleString()}</span>
-                            </div>
-                            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.5rem" }}>
-                                <span style={{ color: "var(--muted-foreground)" }}>Totale Utlegg</span>
-                                <span>{expenses.reduce((s, e) => s + e.amount, 0).toLocaleString()}</span>
-                            </div>
-                            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.5rem" }}>
-                                <span style={{ color: "var(--muted-foreground)" }}>Totale Lån</span>
-                                <span>{loans.reduce((s, l) => s + l.principalAmount, 0).toLocaleString()}</span>
-                            </div>
-                            <div style={{ marginTop: "1rem", paddingTop: "1rem", borderTop: "1px solid var(--border)", display: "flex", justifyContent: "space-between", fontWeight: "bold" }}>
-                                <span>Netto til fordeling</span>
-                                <span>{(settlement?.netProceeds || 0).toLocaleString()}</span>
-                            </div>
+                            <h3 style={{ marginBottom: '0.7rem' }}>Prosjektstatus</h3>
+                            <p style={{ color: 'var(--muted-foreground)', fontSize: '0.9rem', marginBottom: '0.45rem' }}>
+                                Startdato: {project.startDate}
+                            </p>
+                            <p style={{ color: 'var(--muted-foreground)', fontSize: '0.9rem', marginBottom: '0.45rem' }}>
+                                Adresse: {project.address || 'Ikke satt'}
+                            </p>
+                            <p style={{ color: 'var(--muted-foreground)', fontSize: '0.9rem' }}>
+                                Valuta: {project.currency}
+                            </p>
                         </div>
 
                         <div className="card">
-                            <h3 style={{ marginBottom: "1rem", fontSize: "1.1rem" }}>Prosjektdeltakere</h3>
-                            <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
-                                {participants.map(p => (
-                                    <div key={p.id} style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
-                                        <div style={{
-                                            width: "32px", height: "32px", borderRadius: "50%",
-                                            backgroundColor: "var(--secondary)", display: "flex",
-                                            alignItems: "center", justifyContent: "center", fontSize: "0.8rem", fontWeight: "bold"
-                                        }}>
-                                            {p.name.charAt(0)}
+                            <h3 style={{ marginBottom: '0.7rem' }}>Deltakere</h3>
+                            {participants.length === 0 ? (
+                                <p style={{ color: 'var(--muted-foreground)', fontSize: '0.9rem' }}>
+                                    Ingen deltakere registrert.
+                                </p>
+                            ) : (
+                                <div style={{ display: 'grid', gap: '0.45rem' }}>
+                                    {participants.map((participant) => (
+                                        <div key={participant.id} className="flex-between">
+                                            <span>{participant.name}</span>
+                                            <strong>{participant.ownershipShare}%</strong>
                                         </div>
-                                        <div style={{ flex: 1 }}>
-                                            <div style={{ fontSize: "0.9rem", fontWeight: "500" }}>{p.name}</div>
-                                            <div style={{ fontSize: "0.8rem", color: "var(--muted-foreground)" }}>{p.role}</div>
-                                        </div>
-                                        <div style={{ fontSize: "0.9rem", fontWeight: "bold" }}>{p.ownershipShare}%</div>
-                                    </div>
-                                ))}
-                            </div>
+                                    ))}
+                                </div>
+                            )}
                         </div>
                     </div>
                 )}
 
-                {activeTab === 'participants' && <ParticipantsTab projectId={project.id} participants={participants} onUpdate={handleUpdate} />}
-                {activeTab === 'expenses' && <ExpensesTab projectId={project.id} expenses={expenses} participants={participants} onUpdate={handleUpdate} />}
-                {activeTab === 'loans' && <LoansTab projectId={project.id} loans={loans} participants={participants} onUpdate={handleUpdate} />}
-                {activeTab === 'labor' && <LaborTab projectId={project.id} labor={labor} participants={participants} onUpdate={handleUpdate} />}
+                {activeTab === 'participants' && (
+                    <ParticipantsTab projectId={project.id} participants={participants} onUpdate={handleUpdate} />
+                )}
+
+                {activeTab === 'expenses' && (
+                    <ExpensesTab projectId={project.id} expenses={expenses} participants={participants} onUpdate={handleUpdate} />
+                )}
+
+                {activeTab === 'loans' && (
+                    <LoansTab projectId={project.id} loans={loans} participants={participants} onUpdate={handleUpdate} />
+                )}
+
+                {activeTab === 'labor' && (
+                    <LaborTab projectId={project.id} labor={labor} participants={participants} onUpdate={handleUpdate} />
+                )}
+
                 {activeTab === 'sale' && (
-                    <div style={{ display: "grid", gap: "2rem" }}>
+                    <div style={{ display: 'grid', gap: '1rem' }}>
                         <SaleTab projectId={project.id} sale={sale} onUpdate={handleUpdate} />
                         <SettlementTab result={settlement} />
                     </div>
@@ -194,9 +225,80 @@ function FlipProjectContent() {
     );
 }
 
+function TabButton({
+    id,
+    label,
+    icon: Icon,
+    activeTab,
+    onChange
+}: {
+    id: TabId;
+    label: string;
+    icon: React.ComponentType<{ size?: number }>;
+    activeTab: TabId;
+    onChange: (id: TabId) => void;
+}) {
+    const active = activeTab === id;
+
+    return (
+        <button
+            onClick={() => onChange(id)}
+            style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.4rem',
+                padding: '0.65rem 0.8rem',
+                border: 'none',
+                borderBottom: active ? '2px solid var(--primary)' : '2px solid transparent',
+                background: 'none',
+                color: active ? 'var(--foreground)' : 'var(--muted-foreground)',
+                fontWeight: active ? 600 : 500,
+                cursor: 'pointer',
+                whiteSpace: 'nowrap'
+            }}
+        >
+            <Icon size={16} />
+            {label}
+        </button>
+    );
+}
+
+function StatCard({ label, value }: { label: string; value: string }) {
+    return (
+        <div className="card" style={{ padding: '0.85rem 1rem' }}>
+            <p style={{ color: 'var(--muted-foreground)', fontSize: '0.85rem' }}>{label}</p>
+            <p style={{ fontSize: '1.1rem', fontWeight: 700 }}>{value}</p>
+        </div>
+    );
+}
+
+const badgeStyle: React.CSSProperties = {
+    padding: '0.18rem 0.6rem',
+    borderRadius: 999,
+    border: '1px solid var(--border)',
+    backgroundColor: 'var(--secondary)',
+    fontSize: '0.8rem',
+    fontWeight: 600
+};
+
+const activeBadge: React.CSSProperties = {
+    ...badgeStyle,
+    borderColor: '#86efac',
+    color: '#166534',
+    backgroundColor: '#dcfce7'
+};
+
 export default function FlipProjectPage() {
     return (
-        <Suspense fallback={<main className="container" style={{ paddingTop: "2rem" }}><p>Laster...</p></main>}>
+        <Suspense
+            fallback={
+                <main className="container" style={{ paddingTop: '2rem' }}>
+                    <div className="card">
+                        <p style={{ color: 'var(--muted-foreground)' }}>Laster prosjekt ...</p>
+                    </div>
+                </main>
+            }
+        >
             <FlipProjectContent />
         </Suspense>
     );

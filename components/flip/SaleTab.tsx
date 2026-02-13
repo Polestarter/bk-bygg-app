@@ -1,6 +1,6 @@
-'use client';
+﻿'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { FlipSale } from '@/lib/flip-types';
 import { upsertFlipSale } from '@/lib/flip-db';
 import { Gavel, Save } from 'lucide-react';
@@ -11,100 +11,111 @@ interface Props {
     onUpdate: () => void;
 }
 
+const inputStyle: React.CSSProperties = {
+    width: '100%',
+    padding: '0.6rem 0.7rem',
+    borderRadius: 'var(--radius)',
+    border: '1px solid var(--border)',
+    backgroundColor: 'var(--background)',
+    color: 'var(--foreground)'
+};
+
 export default function SaleTab({ projectId, sale, onUpdate }: Props) {
-    const [formData, setFormData] = useState<Partial<FlipSale>>({
+    const [form, setForm] = useState<Partial<FlipSale>>({
         grossSalePrice: 0,
-        saleCosts: 0, // Manual override or additional costs?
+        saleCosts: 0,
         saleDate: new Date().toISOString().split('T')[0]
     });
 
     useEffect(() => {
-        if (sale) {
-            setFormData({
-                grossSalePrice: sale.grossSalePrice,
-                saleCosts: sale.saleCosts,
-                saleDate: sale.saleDate
-            });
-        }
+        if (!sale) return;
+        setForm({
+            grossSalePrice: sale.grossSalePrice,
+            saleCosts: sale.saleCosts,
+            saleDate: sale.saleDate
+        });
     }, [sale]);
 
     const handleSave = async () => {
         await upsertFlipSale({
             projectId,
-            grossSalePrice: Number(formData.grossSalePrice),
-            saleCosts: Number(formData.saleCosts),
-            saleDate: formData.saleDate!
+            saleDate: form.saleDate || new Date().toISOString().split('T')[0],
+            grossSalePrice: Number(form.grossSalePrice) || 0,
+            saleCosts: Number(form.saleCosts) || 0
         });
-        alert('Salgsinfo lagret!');
+
         onUpdate();
     };
 
-    const netProceeds = (formData.grossSalePrice || 0) - (formData.saleCosts || 0);
+    const netProceeds = (Number(form.grossSalePrice) || 0) - (Number(form.saleCosts) || 0);
 
     return (
-        <div className="max-w-2xl">
-            <div className="flex justify-between items-center mb-6">
-                <h2 className="text-xl font-bold flex items-center gap-2">
-                    <Gavel size={24} /> Salgsdetaljer
-                </h2>
-                <button
-                    onClick={handleSave}
-                    className="bg-black text-white px-4 py-2 rounded-lg text-sm flex items-center gap-2 hover:bg-gray-800"
-                >
-                    <Save size={16} /> Lagre detaljer
+        <div style={{ display: 'grid', gap: '1rem' }}>
+            <div className="flex-between" style={{ flexWrap: 'wrap', gap: '0.75rem' }}>
+                <div>
+                    <h2 style={{ fontSize: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <Gavel size={20} /> Salg
+                    </h2>
+                    <p style={{ color: 'var(--muted-foreground)', fontSize: '0.9rem' }}>
+                        Registrer sluttall fra salget.
+                    </p>
+                </div>
+
+                <button className="btn btn-primary" onClick={handleSave} style={{ gap: '0.5rem' }}>
+                    <Save size={16} /> Lagre salgstall
                 </button>
             </div>
 
-            <div className="bg-white p-6 rounded-xl shadow-sm border space-y-6">
+            <div className="card" style={{ display: 'grid', gap: '0.9rem' }}>
                 <div>
-                    <label className="block text-sm font-medium mb-1">Salgsdato</label>
+                    <label style={labelStyle}>Salgsdato</label>
                     <input
                         type="date"
-                        className="w-full border rounded-lg p-2"
-                        value={formData.saleDate}
-                        onChange={e => setFormData({ ...formData, saleDate: e.target.value })}
+                        style={inputStyle}
+                        value={form.saleDate || ''}
+                        onChange={(event) => setForm({ ...form, saleDate: event.target.value })}
                     />
                 </div>
 
                 <div>
-                    <label className="block text-sm font-medium mb-1">Brutto Salgspris (Salgsdokument)</label>
-                    <div className="relative">
-                        <input
-                            type="number"
-                            className="w-full border rounded-lg p-2 pr-12 text-lg font-bold"
-                            value={formData.grossSalePrice}
-                            onChange={e => setFormData({ ...formData, grossSalePrice: Number(e.target.value) })}
-                        />
-                        <span className="absolute right-4 top-3 text-gray-500 text-sm">NOK</span>
-                    </div>
+                    <label style={labelStyle}>Brutto salgspris (NOK)</label>
+                    <input
+                        type="number"
+                        min={0}
+                        style={inputStyle}
+                        value={form.grossSalePrice || 0}
+                        onChange={(event) => setForm({ ...form, grossSalePrice: Number(event.target.value) })}
+                    />
                 </div>
 
                 <div>
-                    <label className="block text-sm font-medium mb-1">Salgsomkostninger (Megler, etc.)</label>
-                    <div className="relative">
-                        <input
-                            type="number"
-                            className="w-full border rounded-lg p-2 pr-12"
-                            value={formData.saleCosts}
-                            onChange={e => setFormData({ ...formData, saleCosts: Number(e.target.value) })}
-                        />
-                        <span className="absolute right-4 top-3 text-gray-500 text-sm">NOK</span>
-                    </div>
-                    <p className="text-xs text-gray-500 mt-1">
-                        Dette beløpet trekkes fra bruttosummen før nettoproveny beregnes.
-                        Du kan også registrere dette som "Utlegg" med taggen "SaleCost" i Utlegg-fanen, men her kan du legge inn sluttsummen direkte fra oppgjørsskjemaet.
+                    <label style={labelStyle}>Salgskostnader (NOK)</label>
+                    <input
+                        type="number"
+                        min={0}
+                        style={inputStyle}
+                        value={form.saleCosts || 0}
+                        onChange={(event) => setForm({ ...form, saleCosts: Number(event.target.value) })}
+                    />
+                    <p style={{ fontSize: '0.82rem', color: 'var(--muted-foreground)', marginTop: '0.35rem' }}>
+                        Disse kostnadene trekkes fra brutto salgspris for a beregne nettoproveny.
                     </p>
                 </div>
 
-                <div className="border-t pt-4 mt-4">
-                    <div className="flex justify-between items-center">
-                        <span className="font-medium text-gray-700">Estimert Nettoproveny</span>
-                        <span className={`text-2xl font-bold ${netProceeds >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                            {netProceeds.toLocaleString()} NOK
-                        </span>
-                    </div>
+                <div style={{ borderTop: '1px solid var(--border)', paddingTop: '0.85rem' }}>
+                    <p style={{ color: 'var(--muted-foreground)', fontSize: '0.85rem' }}>Estimert nettoproveny</p>
+                    <p style={{ fontSize: '1.6rem', fontWeight: 700, color: netProceeds >= 0 ? '#166534' : 'var(--destructive)' }}>
+                        {netProceeds.toLocaleString()} NOK
+                    </p>
                 </div>
             </div>
         </div>
     );
 }
+
+const labelStyle: React.CSSProperties = {
+    display: 'block',
+    marginBottom: '0.35rem',
+    fontSize: '0.85rem',
+    color: 'var(--muted-foreground)'
+};

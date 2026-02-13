@@ -1,9 +1,9 @@
-'use client';
+﻿'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { FlipLoan, FlipParticipant } from '@/lib/flip-types';
 import { addFlipLoan, deleteFlipLoan } from '@/lib/flip-db';
-import { Plus, Trash2, Banknote } from 'lucide-react';
+import { Banknote, Plus, Trash2 } from 'lucide-react';
 
 interface Props {
     projectId: string;
@@ -12,103 +12,144 @@ interface Props {
     onUpdate: () => void;
 }
 
+const inputStyle: React.CSSProperties = {
+    width: '100%',
+    padding: '0.6rem 0.7rem',
+    borderRadius: 'var(--radius)',
+    border: '1px solid var(--border)',
+    backgroundColor: 'var(--background)',
+    color: 'var(--foreground)'
+};
+
 export default function LoansTab({ projectId, loans, participants, onUpdate }: Props) {
     const [isAdding, setIsAdding] = useState(false);
-    const [newLoan, setNewLoan] = useState<Partial<FlipLoan>>({
+    const [form, setForm] = useState<Partial<FlipLoan>>({
         type: 'PrivateLoan',
         principalAmount: 0,
-        lenderParticipantId: participants[0]?.id || '',
+        lenderParticipantId: participants[0]?.id,
         lenderExternal: '',
         notes: ''
     });
 
+    const totals = useMemo(() => {
+        const privateTotal = loans
+            .filter((loan) => loan.type === 'PrivateLoan')
+            .reduce((sum, loan) => sum + loan.principalAmount, 0);
+
+        const otherTotal = loans
+            .filter((loan) => loan.type === 'OtherLoan')
+            .reduce((sum, loan) => sum + loan.principalAmount, 0);
+
+        return { privateTotal, otherTotal, all: privateTotal + otherTotal };
+    }, [loans]);
+
     const handleAdd = async () => {
-        if (!newLoan.principalAmount) return;
+        if (!form.principalAmount) return;
 
         await addFlipLoan({
             projectId,
-            type: newLoan.type!,
-            principalAmount: Number(newLoan.principalAmount),
-            lenderParticipantId: newLoan.type === 'PrivateLoan' ? newLoan.lenderParticipantId : undefined,
-            lenderExternal: newLoan.type === 'OtherLoan' ? (newLoan.lenderExternal || 'Bank') : undefined,
-            notes: newLoan.notes
+            type: form.type || 'PrivateLoan',
+            principalAmount: Number(form.principalAmount),
+            lenderParticipantId: form.type === 'PrivateLoan' ? form.lenderParticipantId : undefined,
+            lenderExternal: form.type === 'OtherLoan' ? (form.lenderExternal?.trim() || 'Bank') : undefined,
+            notes: form.notes?.trim() || undefined
         });
 
-        setIsAdding(false);
-        setNewLoan({
+        setForm({
             type: 'PrivateLoan',
             principalAmount: 0,
-            lenderParticipantId: participants[0]?.id || '',
+            lenderParticipantId: participants[0]?.id,
             lenderExternal: '',
             notes: ''
         });
+
+        setIsAdding(false);
         onUpdate();
     };
 
     const handleDelete = async (id: string) => {
-        if (confirm('Slett lån?')) {
-            await deleteFlipLoan(id);
-            onUpdate();
-        }
+        if (!confirm('Vil du slette dette lanet?')) return;
+        await deleteFlipLoan(id);
+        onUpdate();
     };
 
-    const getLenderName = (l: FlipLoan) => {
-        if (l.type === 'PrivateLoan' && l.lenderParticipantId) {
-            return participants.find(p => p.id === l.lenderParticipantId)?.name || 'Ukjent partner';
+    const getLender = (loan: FlipLoan) => {
+        if (loan.type === 'PrivateLoan' && loan.lenderParticipantId) {
+            return participants.find((participant) => participant.id === loan.lenderParticipantId)?.name || 'Ukjent';
         }
-        return l.lenderExternal || 'Ekstern';
+        return loan.lenderExternal || 'Ekstern';
     };
 
     return (
-        <div className="max-w-4xl">
-            <div className="flex justify-between items-center mb-6">
-                <h2 className="text-xl font-bold flex items-center gap-2">
-                    <Banknote size={24} /> Lån & Finansiering
-                </h2>
-                <button
-                    onClick={() => setIsAdding(true)}
-                    className="bg-black text-white px-4 py-2 rounded-lg text-sm flex items-center gap-2 hover:bg-gray-800"
-                >
-                    <Plus size={16} /> Nytt Lån
+        <div style={{ display: 'grid', gap: '1rem' }}>
+            <div className="flex-between" style={{ flexWrap: 'wrap', gap: '0.75rem' }}>
+                <div>
+                    <h2 style={{ fontSize: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <Banknote size={20} /> Lan
+                    </h2>
+                    <p style={{ color: 'var(--muted-foreground)', fontSize: '0.9rem' }}>
+                        Hold oversikt over private lan og eksterne lan.
+                    </p>
+                </div>
+
+                <button className="btn btn-primary" onClick={() => setIsAdding(true)} style={{ gap: '0.5rem' }}>
+                    <Plus size={16} /> Nytt lan
                 </button>
             </div>
 
-            <div className="mb-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="bg-blue-50 p-4 rounded-xl border border-blue-100">
-                    <h3 className="font-bold text-blue-900 mb-1">Privat Lån (Prio 1)</h3>
-                    <p className="text-sm text-blue-700">Lån fra partnere. Tilbakebetales først ved oppgjør.</p>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '0.75rem' }}>
+                <div className="card" style={{ padding: '0.85rem 1rem' }}>
+                    <p style={{ color: 'var(--muted-foreground)', fontSize: '0.85rem' }}>Privat lan (prio 1)</p>
+                    <p style={{ fontWeight: 700, fontSize: '1.2rem' }}>{totals.privateTotal.toLocaleString()} NOK</p>
                 </div>
-                <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
-                    <h3 className="font-bold text-gray-900 mb-1">Andre Lån (Prio 2)</h3>
-                    <p className="text-sm text-gray-700">Banklån, firmalån, etc. Tilbakebetales etter private lån men før overskudd.</p>
+                <div className="card" style={{ padding: '0.85rem 1rem' }}>
+                    <p style={{ color: 'var(--muted-foreground)', fontSize: '0.85rem' }}>Andre lan (prio 2)</p>
+                    <p style={{ fontWeight: 700, fontSize: '1.2rem' }}>{totals.otherTotal.toLocaleString()} NOK</p>
+                </div>
+                <div className="card" style={{ padding: '0.85rem 1rem' }}>
+                    <p style={{ color: 'var(--muted-foreground)', fontSize: '0.85rem' }}>Totalt</p>
+                    <p style={{ fontWeight: 700, fontSize: '1.2rem' }}>{totals.all.toLocaleString()} NOK</p>
                 </div>
             </div>
 
-            <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
-                <table className="w-full text-sm">
-                    <thead className="bg-gray-50 text-gray-500 font-medium">
-                        <tr>
-                            <th className="px-6 py-4 text-left">Type</th>
-                            <th className="px-6 py-4 text-left">Långiver</th>
-                            <th className="px-6 py-4 text-left">Notat</th>
-                            <th className="px-6 py-4 text-right">Beløp</th>
-                            <th className="px-6 py-4 text-right"></th>
+            <div className="card" style={{ overflowX: 'auto', padding: 0 }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 820 }}>
+                    <thead>
+                        <tr style={{ backgroundColor: 'var(--secondary)' }}>
+                            <th style={headerCell}>Type</th>
+                            <th style={headerCell}>Langiver</th>
+                            <th style={headerCell}>Notat</th>
+                            <th style={{ ...headerCell, textAlign: 'right' }}>Belop</th>
+                            <th style={{ ...headerCell, textAlign: 'right' }}>Handling</th>
                         </tr>
                     </thead>
-                    <tbody className="divide-y divide-gray-100">
-                        {loans.map(l => (
-                            <tr key={l.id}>
-                                <td className="px-6 py-4">
-                                    <span className={`px-2 py-1 rounded text-xs font-medium 
-                                        ${l.type === 'PrivateLoan' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-700'}`}>
-                                        {l.type === 'PrivateLoan' ? 'Privat (Prio 1)' : 'Annet (Prio 2)'}
+                    <tbody>
+                        {loans.length === 0 && (
+                            <tr>
+                                <td colSpan={5} style={{ ...cell, color: 'var(--muted-foreground)', textAlign: 'center', padding: '2rem 1rem' }}>
+                                    Ingen lan registrert enda.
+                                </td>
+                            </tr>
+                        )}
+
+                        {loans.map((loan) => (
+                            <tr key={loan.id} style={{ borderTop: '1px solid var(--border)' }}>
+                                <td style={cell}>
+                                    <span style={loan.type === 'PrivateLoan' ? typePrivateStyle : typeOtherStyle}>
+                                        {loan.type === 'PrivateLoan' ? 'Privat (prio 1)' : 'Annet (prio 2)'}
                                     </span>
                                 </td>
-                                <td className="px-6 py-4 font-medium">{getLenderName(l)}</td>
-                                <td className="px-6 py-4 text-gray-500">{l.notes || '-'}</td>
-                                <td className="px-6 py-4 text-right font-medium">{l.principalAmount.toLocaleString()}</td>
-                                <td className="px-6 py-4 text-right">
-                                    <button onClick={() => handleDelete(l.id)} className="text-red-500 hover:text-red-700">
+                                <td style={cell}>{getLender(loan)}</td>
+                                <td style={{ ...cell, color: 'var(--muted-foreground)' }}>{loan.notes || '-'}</td>
+                                <td style={{ ...cell, textAlign: 'right', fontWeight: 600 }}>
+                                    {loan.principalAmount.toLocaleString()} NOK
+                                </td>
+                                <td style={{ ...cell, textAlign: 'right' }}>
+                                    <button
+                                        className="btn btn-ghost"
+                                        style={{ color: 'var(--destructive)', padding: '0.4rem 0.6rem' }}
+                                        onClick={() => handleDelete(loan.id)}
+                                    >
                                         <Trash2 size={16} />
                                     </button>
                                 </td>
@@ -119,77 +160,82 @@ export default function LoansTab({ projectId, loans, participants, onUpdate }: P
             </div>
 
             {isAdding && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-                    <div className="bg-white rounded-xl p-6 w-full max-w-md">
-                        <h3 className="text-lg font-bold mb-4">Registrer Lån</h3>
+                <div style={modalOverlay}>
+                    <div className="card" style={{ width: '100%', maxWidth: 560 }}>
+                        <h3 style={{ marginBottom: '1rem' }}>Nytt lan</h3>
 
-                        <div className="space-y-4">
+                        <div style={{ display: 'grid', gap: '0.9rem' }}>
                             <div>
-                                <label className="block text-sm font-medium mb-1">Type Lån</label>
-                                <div className="grid grid-cols-2 gap-2">
+                                <label style={labelStyle}>Type</label>
+                                <div style={{ display: 'flex', gap: '0.5rem' }}>
                                     <button
-                                        onClick={() => setNewLoan({ ...newLoan, type: 'PrivateLoan' })}
-                                        className={`py-2 rounded-lg border text-sm ${newLoan.type === 'PrivateLoan' ? 'bg-blue-50 border-blue-500 text-blue-700 font-bold' : 'border-gray-200'}`}
+                                        className="btn btn-outline"
+                                        onClick={() => setForm({ ...form, type: 'PrivateLoan' })}
+                                        style={form.type === 'PrivateLoan' ? selectedTypeStyle : undefined}
                                     >
-                                        Privat (Partner)
+                                        Privat lan
                                     </button>
                                     <button
-                                        onClick={() => setNewLoan({ ...newLoan, type: 'OtherLoan', lenderExternal: 'Bank' })}
-                                        className={`py-2 rounded-lg border text-sm ${newLoan.type === 'OtherLoan' ? 'bg-gray-100 border-gray-500 text-black font-bold' : 'border-gray-200'}`}
+                                        className="btn btn-outline"
+                                        onClick={() => setForm({ ...form, type: 'OtherLoan', lenderExternal: form.lenderExternal || 'Bank' })}
+                                        style={form.type === 'OtherLoan' ? selectedTypeStyle : undefined}
                                     >
-                                        Annet (Bank/Firma)
+                                        Annet lan
                                     </button>
                                 </div>
                             </div>
 
-                            {newLoan.type === 'PrivateLoan' ? (
+                            {form.type === 'PrivateLoan' ? (
                                 <div>
-                                    <label className="block text-sm font-medium mb-1">Långiver (Partner)</label>
+                                    <label style={labelStyle}>Langiver (deltaker)</label>
                                     <select
-                                        className="w-full border rounded-lg p-2"
-                                        value={newLoan.lenderParticipantId}
-                                        onChange={(e) => setNewLoan({ ...newLoan, lenderParticipantId: e.target.value })}
+                                        style={inputStyle}
+                                        value={form.lenderParticipantId || ''}
+                                        onChange={(event) => setForm({ ...form, lenderParticipantId: event.target.value })}
                                     >
-                                        {participants.map(p => (
-                                            <option key={p.id} value={p.id}>{p.name}</option>
+                                        {participants.map((participant) => (
+                                            <option key={participant.id} value={participant.id}>
+                                                {participant.name}
+                                            </option>
                                         ))}
                                     </select>
                                 </div>
                             ) : (
                                 <div>
-                                    <label className="block text-sm font-medium mb-1">Långiver (Navn/Bank)</label>
+                                    <label style={labelStyle}>Langiver (ekstern)</label>
                                     <input
-                                        className="w-full border rounded-lg p-2"
-                                        value={newLoan.lenderExternal}
-                                        onChange={(e) => setNewLoan({ ...newLoan, lenderExternal: e.target.value })}
-                                        placeholder="F.eks. DNB Boliglån"
+                                        style={inputStyle}
+                                        value={form.lenderExternal || ''}
+                                        onChange={(event) => setForm({ ...form, lenderExternal: event.target.value })}
+                                        placeholder="F.eks. DNB"
                                     />
                                 </div>
                             )}
 
                             <div>
-                                <label className="block text-sm font-medium mb-1">Lånebeløp</label>
+                                <label style={labelStyle}>Belop (NOK)</label>
                                 <input
+                                    style={inputStyle}
                                     type="number"
-                                    className="w-full border rounded-lg p-2"
-                                    value={newLoan.principalAmount}
-                                    onChange={(e) => setNewLoan({ ...newLoan, principalAmount: Number(e.target.value) })}
+                                    min={0}
+                                    value={form.principalAmount || 0}
+                                    onChange={(event) => setForm({ ...form, principalAmount: Number(event.target.value) })}
                                 />
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium mb-1">Notat</label>
+                                <label style={labelStyle}>Notat</label>
                                 <textarea
-                                    className="w-full border rounded-lg p-2"
-                                    value={newLoan.notes}
-                                    onChange={(e) => setNewLoan({ ...newLoan, notes: e.target.value })}
+                                    style={{ ...inputStyle, minHeight: '80px', resize: 'vertical' }}
+                                    value={form.notes || ''}
+                                    onChange={(event) => setForm({ ...form, notes: event.target.value })}
                                 />
                             </div>
                         </div>
 
-                        <div className="flex justify-end gap-2 mt-6">
-                            <button onClick={() => setIsAdding(false)} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg">Avbryt</button>
-                            <button onClick={handleAdd} className="px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800">Lagre</button>
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', marginTop: '1.2rem' }}>
+                            <button className="btn btn-ghost" onClick={() => setIsAdding(false)}>Avbryt</button>
+                            <button className="btn btn-primary" onClick={handleAdd}>Lagre</button>
                         </div>
                     </div>
                 </div>
@@ -197,3 +243,59 @@ export default function LoansTab({ projectId, loans, participants, onUpdate }: P
         </div>
     );
 }
+
+const headerCell: React.CSSProperties = {
+    padding: '0.85rem 1rem',
+    textAlign: 'left',
+    fontSize: '0.85rem',
+    color: 'var(--muted-foreground)',
+    fontWeight: 600
+};
+
+const cell: React.CSSProperties = {
+    padding: '0.85rem 1rem',
+    fontSize: '0.92rem'
+};
+
+const labelStyle: React.CSSProperties = {
+    display: 'block',
+    marginBottom: '0.35rem',
+    fontSize: '0.85rem',
+    color: 'var(--muted-foreground)'
+};
+
+const typePrivateStyle: React.CSSProperties = {
+    padding: '0.2rem 0.45rem',
+    borderRadius: 999,
+    backgroundColor: '#dcfce7',
+    color: '#166534',
+    border: '1px solid #86efac',
+    fontSize: '0.75rem',
+    fontWeight: 600
+};
+
+const typeOtherStyle: React.CSSProperties = {
+    padding: '0.2rem 0.45rem',
+    borderRadius: 999,
+    backgroundColor: 'var(--secondary)',
+    color: 'var(--foreground)',
+    border: '1px solid var(--border)',
+    fontSize: '0.75rem',
+    fontWeight: 600
+};
+
+const selectedTypeStyle: React.CSSProperties = {
+    borderColor: 'var(--primary)',
+    backgroundColor: 'rgba(163, 230, 53, 0.2)'
+};
+
+const modalOverlay: React.CSSProperties = {
+    position: 'fixed',
+    inset: 0,
+    backgroundColor: 'rgba(15, 23, 42, 0.45)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: '1rem',
+    zIndex: 50
+};

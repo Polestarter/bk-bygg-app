@@ -1,9 +1,9 @@
-'use client';
+﻿'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { FlipExpense, FlipParticipant } from '@/lib/flip-types';
 import { addFlipExpense, deleteFlipExpense } from '@/lib/flip-db';
-import { Plus, Trash2, Receipt, Filter } from 'lucide-react';
+import { Plus, Receipt, Trash2 } from 'lucide-react';
 
 interface Props {
     projectId: string;
@@ -12,214 +12,255 @@ interface Props {
     onUpdate: () => void;
 }
 
+const inputStyle: React.CSSProperties = {
+    width: '100%',
+    padding: '0.6rem 0.7rem',
+    borderRadius: 'var(--radius)',
+    border: '1px solid var(--border)',
+    backgroundColor: 'var(--background)',
+    color: 'var(--foreground)'
+};
+
 export default function ExpensesTab({ projectId, expenses, participants, onUpdate }: Props) {
     const [isAdding, setIsAdding] = useState(false);
-    const [newExpense, setNewExpense] = useState<Partial<FlipExpense>>({
+    const [form, setForm] = useState<Partial<FlipExpense>>({
         date: new Date().toISOString().split('T')[0],
         description: '',
         amount: 0,
         category: 'Materialer',
-        paidByParticipantId: participants[0]?.id || '', // Default to first participant
+        paidByParticipantId: participants[0]?.id,
         distributionRule: 'ownership',
         tags: []
     });
 
+    const totalAmount = useMemo(
+        () => expenses.reduce((sum, expense) => sum + expense.amount, 0),
+        [expenses]
+    );
+
     const handleAdd = async () => {
-        if (!newExpense.description || !newExpense.amount) return;
+        if (!form.description?.trim() || !form.amount) return;
 
         await addFlipExpense({
             projectId,
-            date: newExpense.date!,
-            description: newExpense.description!,
-            amount: Number(newExpense.amount),
-            category: newExpense.category,
-            paidByParticipantId: newExpense.paidByParticipantId,
-            paidByExternal: newExpense.paidByExternal,
-            distributionRule: newExpense.distributionRule || 'ownership',
-            tags: newExpense.tags
+            date: form.date || new Date().toISOString().split('T')[0],
+            description: form.description.trim(),
+            amount: Number(form.amount),
+            category: form.category?.trim() || undefined,
+            paidByParticipantId: form.paidByParticipantId || undefined,
+            paidByExternal: form.paidByParticipantId ? undefined : (form.paidByExternal?.trim() || 'Ekstern'),
+            distributionRule: form.distributionRule || 'ownership',
+            tags: form.tags || []
         });
 
-        setIsAdding(false);
-        setNewExpense({
+        setForm({
             date: new Date().toISOString().split('T')[0],
             description: '',
             amount: 0,
             category: 'Materialer',
-            paidByParticipantId: participants[0]?.id || '',
+            paidByParticipantId: participants[0]?.id,
             distributionRule: 'ownership',
             tags: []
         });
+
+        setIsAdding(false);
         onUpdate();
     };
 
     const handleDelete = async (id: string) => {
-        if (confirm('Slett utlegg?')) {
-            await deleteFlipExpense(id);
-            onUpdate();
-        }
+        if (!confirm('Vil du slette dette utlegget?')) return;
+        await deleteFlipExpense(id);
+        onUpdate();
     };
 
-    const getPayerName = (e: FlipExpense) => {
-        if (e.paidByParticipantId) {
-            return participants.find(p => p.id === e.paidByParticipantId)?.name || 'Ukjent';
+    const getPayerName = (expense: FlipExpense) => {
+        if (expense.paidByParticipantId) {
+            return participants.find((participant) => participant.id === expense.paidByParticipantId)?.name || 'Ukjent';
         }
-        return e.paidByExternal || 'Ekstern';
+        return expense.paidByExternal || 'Ekstern';
     };
 
     return (
-        <div className="max-w-4xl">
-            <div className="flex justify-between items-center mb-6">
-                <h2 className="text-xl font-bold flex items-center gap-2">
-                    <Receipt size={24} /> Utlegg
-                </h2>
-                <div className="flex gap-2">
-                    <button
-                        onClick={() => setIsAdding(true)}
-                        className="bg-black text-white px-4 py-2 rounded-lg text-sm flex items-center gap-2 hover:bg-gray-800"
-                    >
-                        <Plus size={16} /> Nytt Utlegg
-                    </button>
+        <div style={{ display: 'grid', gap: '1rem' }}>
+            <div className="flex-between" style={{ flexWrap: 'wrap', gap: '0.75rem' }}>
+                <div>
+                    <h2 style={{ fontSize: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <Receipt size={20} /> Utlegg
+                    </h2>
+                    <p style={{ color: 'var(--muted-foreground)', fontSize: '0.9rem' }}>
+                        Registrer kostnader og hvem som har lagt ut.
+                    </p>
                 </div>
+
+                <button className="btn btn-primary" onClick={() => setIsAdding(true)} style={{ gap: '0.5rem' }}>
+                    <Plus size={16} /> Nytt utlegg
+                </button>
             </div>
 
-            <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
-                <table className="w-full text-sm">
-                    <thead className="bg-gray-50 text-gray-500 font-medium">
-                        <tr>
-                            <th className="px-6 py-4 text-left">Dato</th>
-                            <th className="px-6 py-4 text-left">Beskrivelse</th>
-                            <th className="px-6 py-4 text-left">Betalt av</th>
-                            <th className="px-6 py-4 text-left">Kategori</th>
-                            <th className="px-6 py-4 text-right">Beløp</th>
-                            <th className="px-6 py-4 text-right"></th>
+            <div className="card" style={{ overflowX: 'auto', padding: 0 }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 860 }}>
+                    <thead>
+                        <tr style={{ backgroundColor: 'var(--secondary)' }}>
+                            <th style={headerCell}>Dato</th>
+                            <th style={headerCell}>Beskrivelse</th>
+                            <th style={headerCell}>Betalt av</th>
+                            <th style={headerCell}>Kategori</th>
+                            <th style={{ ...headerCell, textAlign: 'right' }}>Belop</th>
+                            <th style={{ ...headerCell, textAlign: 'right' }}>Handling</th>
                         </tr>
                     </thead>
-                    <tbody className="divide-y divide-gray-100">
-                        {expenses.map(e => (
-                            <tr key={e.id}>
-                                <td className="px-6 py-4 text-gray-500">{e.date}</td>
-                                <td className="px-6 py-4 font-medium">
-                                    {e.description}
-                                    {e.tags?.includes('SaleCost') && (
-                                        <span className="ml-2 text-xs bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded">Salgskost</span>
-                                    )}
+                    <tbody>
+                        {expenses.length === 0 && (
+                            <tr>
+                                <td colSpan={6} style={{ ...cell, color: 'var(--muted-foreground)', textAlign: 'center', padding: '2rem 1rem' }}>
+                                    Ingen utlegg registrert enda.
                                 </td>
-                                <td className="px-6 py-4">{getPayerName(e)}</td>
-                                <td className="px-6 py-4 text-gray-500">{e.category}</td>
-                                <td className="px-6 py-4 text-right font-medium">{e.amount.toLocaleString()}</td>
-                                <td className="px-6 py-4 text-right">
-                                    <button onClick={() => handleDelete(e.id)} className="text-red-500 hover:text-red-700">
+                            </tr>
+                        )}
+
+                        {expenses.map((expense) => (
+                            <tr key={expense.id} style={{ borderTop: '1px solid var(--border)' }}>
+                                <td style={cell}>{expense.date}</td>
+                                <td style={cell}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
+                                        <span>{expense.description}</span>
+                                        {expense.tags?.includes('SaleCost') && (
+                                            <span style={saleTagStyle}>Salgskostnad</span>
+                                        )}
+                                    </div>
+                                </td>
+                                <td style={{ ...cell, color: 'var(--muted-foreground)' }}>{getPayerName(expense)}</td>
+                                <td style={{ ...cell, color: 'var(--muted-foreground)' }}>{expense.category || '-'}</td>
+                                <td style={{ ...cell, textAlign: 'right', fontWeight: 600 }}>
+                                    {expense.amount.toLocaleString()} NOK
+                                </td>
+                                <td style={{ ...cell, textAlign: 'right' }}>
+                                    <button
+                                        className="btn btn-ghost"
+                                        style={{ color: 'var(--destructive)', padding: '0.4rem 0.6rem' }}
+                                        onClick={() => handleDelete(expense.id)}
+                                    >
                                         <Trash2 size={16} />
                                     </button>
                                 </td>
                             </tr>
                         ))}
                     </tbody>
-                    <tfoot className="bg-gray-50 border-t font-medium">
-                        <tr>
-                            <td colSpan={4} className="px-6 py-3 text-right">Totalt:</td>
-                            <td className="px-6 py-3 text-right">{expenses.reduce((s, e) => s + e.amount, 0).toLocaleString()}</td>
-                            <td></td>
+                    <tfoot>
+                        <tr style={{ borderTop: '1px solid var(--border)', backgroundColor: 'var(--secondary)' }}>
+                            <td colSpan={4} style={{ ...cell, textAlign: 'right', fontWeight: 600 }}>
+                                Sum
+                            </td>
+                            <td style={{ ...cell, textAlign: 'right', fontWeight: 700 }}>{totalAmount.toLocaleString()} NOK</td>
+                            <td style={cell} />
                         </tr>
                     </tfoot>
                 </table>
             </div>
 
             {isAdding && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-                    <div className="bg-white rounded-xl p-6 w-full max-w-md">
-                        <h3 className="text-lg font-bold mb-4">Registrer Ltlegg</h3>
+                <div style={modalOverlay}>
+                    <div className="card" style={{ width: '100%', maxWidth: 620 }}>
+                        <h3 style={{ marginBottom: '1rem' }}>Nytt utlegg</h3>
 
-                        <div className="space-y-4">
-                            <div className="flex gap-4">
-                                <div className="flex-1">
-                                    <label className="block text-sm font-medium mb-1">Dato</label>
+                        <div style={{ display: 'grid', gap: '0.9rem' }}>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                                <div>
+                                    <label style={labelStyle}>Dato</label>
                                     <input
+                                        style={inputStyle}
                                         type="date"
-                                        className="w-full border rounded-lg p-2"
-                                        value={newExpense.date}
-                                        onChange={e => setNewExpense({ ...newExpense, date: e.target.value })}
+                                        value={form.date || ''}
+                                        onChange={(event) => setForm({ ...form, date: event.target.value })}
                                     />
                                 </div>
-                                <div className="w-1/2">
-                                    <label className="block text-sm font-medium mb-1">Beløp</label>
+                                <div>
+                                    <label style={labelStyle}>Belop (NOK)</label>
                                     <input
+                                        style={inputStyle}
                                         type="number"
-                                        className="w-full border rounded-lg p-2"
-                                        value={newExpense.amount}
-                                        onChange={e => setNewExpense({ ...newExpense, amount: Number(e.target.value) })}
+                                        min={0}
+                                        value={form.amount || 0}
+                                        onChange={(event) => setForm({ ...form, amount: Number(event.target.value) })}
                                     />
                                 </div>
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium mb-1">Beskrivelse</label>
+                                <label style={labelStyle}>Beskrivelse</label>
                                 <input
-                                    className="w-full border rounded-lg p-2"
-                                    value={newExpense.description}
-                                    onChange={e => setNewExpense({ ...newExpense, description: e.target.value })}
-                                    placeholder="F.eks. Maling til stue"
+                                    style={inputStyle}
+                                    value={form.description || ''}
+                                    onChange={(event) => setForm({ ...form, description: event.target.value })}
+                                    placeholder="F.eks. materialer til bad"
                                 />
                             </div>
 
-                            <div className="flex gap-4">
-                                <div className="flex-1">
-                                    <label className="block text-sm font-medium mb-1">Betalt av</label>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                                <div>
+                                    <label style={labelStyle}>Betalt av</label>
                                     <select
-                                        className="w-full border rounded-lg p-2"
-                                        value={newExpense.paidByParticipantId || 'external'}
-                                        onChange={(e) => {
-                                            if (e.target.value === 'external') {
-                                                setNewExpense({ ...newExpense, paidByParticipantId: undefined, paidByExternal: 'Firma/Annet' });
-                                            } else {
-                                                setNewExpense({ ...newExpense, paidByParticipantId: e.target.value, paidByExternal: undefined });
+                                        style={inputStyle}
+                                        value={form.paidByParticipantId || 'external'}
+                                        onChange={(event) => {
+                                            if (event.target.value === 'external') {
+                                                setForm({ ...form, paidByParticipantId: undefined, paidByExternal: 'Ekstern' });
+                                                return;
                                             }
+                                            setForm({ ...form, paidByParticipantId: event.target.value, paidByExternal: undefined });
                                         }}
                                     >
-                                        {participants.map(p => (
-                                            <option key={p.id} value={p.id}>{p.name}</option>
+                                        {participants.map((participant) => (
+                                            <option key={participant.id} value={participant.id}>
+                                                {participant.name}
+                                            </option>
                                         ))}
-                                        <option value="external">Ekstern / Firma</option>
+                                        <option value="external">Ekstern</option>
                                     </select>
                                 </div>
-                                <div className="flex-1">
-                                    <label className="block text-sm font-medium mb-1">Kategori</label>
-                                    <select
-                                        className="w-full border rounded-lg p-2"
-                                        value={newExpense.category}
-                                        onChange={e => setNewExpense({ ...newExpense, category: e.target.value })}
-                                    >
-                                        <option>Materialer</option>
-                                        <option>Verktøy</option>
-                                        <option>Tjenester</option>
-                                        <option>Salgskostnad</option>
-                                        <option>Annet</option>
-                                    </select>
+                                <div>
+                                    <label style={labelStyle}>Kategori</label>
+                                    <input
+                                        style={inputStyle}
+                                        value={form.category || ''}
+                                        onChange={(event) => setForm({ ...form, category: event.target.value })}
+                                        placeholder="Materialer, tjenester ..."
+                                    />
                                 </div>
                             </div>
 
-                            {/* Tag toggle for SaleCost if category matches or manual override */}
-                            <div className="flex items-center gap-2 mt-2">
+                            {!form.paidByParticipantId && (
+                                <div>
+                                    <label style={labelStyle}>Ekstern betaler</label>
+                                    <input
+                                        style={inputStyle}
+                                        value={form.paidByExternal || ''}
+                                        onChange={(event) => setForm({ ...form, paidByExternal: event.target.value })}
+                                        placeholder="F.eks. firma eller bank"
+                                    />
+                                </div>
+                            )}
+
+                            <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.9rem' }}>
                                 <input
                                     type="checkbox"
-                                    id="saleCost"
-                                    checked={newExpense.tags?.includes('SaleCost')}
-                                    onChange={(e) => {
-                                        const tags = newExpense.tags || [];
-                                        if (e.target.checked) {
-                                            setNewExpense({ ...newExpense, tags: [...tags, 'SaleCost'] });
-                                        } else {
-                                            setNewExpense({ ...newExpense, tags: tags.filter(t => t !== 'SaleCost') });
+                                    checked={form.tags?.includes('SaleCost') || false}
+                                    onChange={(event) => {
+                                        const tags = form.tags || [];
+                                        if (event.target.checked) {
+                                            setForm({ ...form, tags: [...tags.filter((tag) => tag !== 'SaleCost'), 'SaleCost'] });
+                                            return;
                                         }
+                                        setForm({ ...form, tags: tags.filter((tag) => tag !== 'SaleCost') });
                                     }}
                                 />
-                                <label htmlFor="saleCost" className="text-sm text-gray-700">Dette er en salgskostnad (trekkes fra før overskudd)</label>
-                            </div>
+                                Marker som salgskostnad (trekkes fra ved oppgjor)
+                            </label>
                         </div>
 
-                        <div className="flex justify-end gap-2 mt-6">
-                            <button onClick={() => setIsAdding(false)} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg">Avbryt</button>
-                            <button onClick={handleAdd} className="px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800">Lagre</button>
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', marginTop: '1.2rem' }}>
+                            <button className="btn btn-ghost" onClick={() => setIsAdding(false)}>Avbryt</button>
+                            <button className="btn btn-primary" onClick={handleAdd}>Lagre</button>
                         </div>
                     </div>
                 </div>
@@ -227,3 +268,43 @@ export default function ExpensesTab({ projectId, expenses, participants, onUpdat
         </div>
     );
 }
+
+const headerCell: React.CSSProperties = {
+    padding: '0.85rem 1rem',
+    textAlign: 'left',
+    fontSize: '0.85rem',
+    color: 'var(--muted-foreground)',
+    fontWeight: 600
+};
+
+const cell: React.CSSProperties = {
+    padding: '0.85rem 1rem',
+    fontSize: '0.92rem'
+};
+
+const labelStyle: React.CSSProperties = {
+    display: 'block',
+    marginBottom: '0.35rem',
+    fontSize: '0.85rem',
+    color: 'var(--muted-foreground)'
+};
+
+const saleTagStyle: React.CSSProperties = {
+    fontSize: '0.75rem',
+    padding: '0.15rem 0.45rem',
+    borderRadius: 999,
+    backgroundColor: '#dcfce7',
+    color: '#166534',
+    border: '1px solid #86efac'
+};
+
+const modalOverlay: React.CSSProperties = {
+    position: 'fixed',
+    inset: 0,
+    backgroundColor: 'rgba(15, 23, 42, 0.45)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: '1rem',
+    zIndex: 50
+};
