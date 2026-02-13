@@ -8,7 +8,8 @@ import {
     getFlipExpenses,
     getFlipLoans,
     getFlipLabor,
-    getFlipSale
+    getFlipSale,
+    deleteFlipProject
 } from '@/lib/flip-db';
 import { calculateFlipSettlement } from '@/lib/flip-calculations';
 import {
@@ -20,7 +21,7 @@ import {
     FlipSale,
     SettlementResult
 } from '@/lib/flip-types';
-import { ArrowLeft, Banknote, Clock3, FileText, Gavel, Receipt, Users } from 'lucide-react';
+import { ArrowLeft, Banknote, Clock3, FileText, Gavel, Receipt, Trash2, Users } from 'lucide-react';
 
 import ParticipantsTab from '@/components/flip/ParticipantsTab';
 import ExpensesTab from '@/components/flip/ExpensesTab';
@@ -120,16 +121,33 @@ function FlipProjectContent() {
         void loadData(id);
     };
 
+    const handleDeleteProject = async () => {
+        if (!id) return;
+        if (!confirm('Er du sikker på at du vil slette dette prosjektet? Dette kan ikke angres.')) return;
+
+        await deleteFlipProject(id);
+        router.push('/flip');
+    };
+
     return (
         <main className="container" style={{ paddingTop: '2rem', paddingBottom: '4rem' }}>
             <div style={{ marginBottom: '1.5rem' }}>
-                <button
-                    onClick={() => router.push('/flip')}
-                    className="btn btn-ghost"
-                    style={{ paddingLeft: 0, color: 'var(--muted-foreground)', gap: '0.45rem' }}
-                >
-                    <ArrowLeft size={16} /> Tilbake til oversikt
-                </button>
+                <div className="flex-between" style={{ gap: '0.75rem', flexWrap: 'wrap' }}>
+                    <button
+                        onClick={() => router.push('/flip')}
+                        className="btn btn-ghost"
+                        style={{ paddingLeft: 0, color: 'var(--muted-foreground)', gap: '0.45rem' }}
+                    >
+                        <ArrowLeft size={16} /> Tilbake til oversikt
+                    </button>
+                    <button
+                        onClick={handleDeleteProject}
+                        className="btn btn-ghost"
+                        style={{ color: 'var(--destructive)', gap: '0.45rem' }}
+                    >
+                        <Trash2 size={16} /> Slett prosjekt
+                    </button>
+                </div>
             </div>
 
             <div className="flex-between" style={{ marginBottom: '1.2rem', gap: '1rem', flexWrap: 'wrap' }}>

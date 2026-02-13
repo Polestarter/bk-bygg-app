@@ -87,6 +87,11 @@ export async function updateFlipProject(id: string, updates: Partial<FlipProject
     if (error) console.error("Error updating project:", error);
 }
 
+export async function deleteFlipProject(id: string): Promise<void> {
+    const { error } = await supabase.from("flip_projects").delete().eq("id", id);
+    if (error) console.error("Error deleting flip project:", error);
+}
+
 // Participants
 export async function getFlipParticipants(projectId: string): Promise<FlipParticipant[]> {
     const { data, error } = await supabase.from("flip_participants").select("*").eq("project_id", projectId);
