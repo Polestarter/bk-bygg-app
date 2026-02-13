@@ -1,20 +1,32 @@
 "use client";
 
-import { useEffect, useState, Suspense } from "react";
+import { Suspense, useEffect, useState, type ComponentType } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { ArrowLeft, FileText, Upload, Folder, Shield, Download, Eye, QrCode, X, Trash2 } from "lucide-react";
-import { getProjects, getProjectDocuments, addProjectDocument } from "@/lib/data"; // Need to implement these
+import { ArrowLeft, Book, Download, Eye, FileCheck, FileText, Folder, Loader2, QrCode, Shield, Trash2, Upload, X } from "lucide-react";
+import { getProjects } from "@/lib/data";
 import { Project, ProjectDocument } from "@/lib/types";
-
-// Missing imports
-import { Book, FileCheck } from "lucide-react";
 import UploadDocumentModal from "./UploadDocumentModal";
 import { jsPDF } from "jspdf";
 
+type Category = {
+    id: ProjectDocument["category"];
+    label: string;
+    icon: ComponentType<{ size?: number }>;
+    color: string;
+};
+
+const categories: Category[] = [
+    { id: "SHA", label: "SHA-plan", icon: Shield, color: "#ef4444" },
+    { id: "SJA", label: "SJA", icon: FileText, color: "#f97316" },
+    { id: "Stoffkartotek", label: "Stoffkartotek", icon: Folder, color: "#3b82f6" },
+    { id: "Brukermanualer", label: "Brukermanualer", icon: Book, color: "#10b981" },
+    { id: "Samsvarserkl\u00e6ringer", label: "Samsvarserkl\u00e6ringer", icon: FileCheck, color: "#8b5cf6" },
+];
+
 export default function ProjectHMSPage() {
     return (
-        <Suspense fallback={<div className="container">Laster...</div>}>
+        <Suspense fallback={<div className="container" style={{ paddingTop: "2rem" }}>Laster...</div>}>
             <ProjectHMSContent />
         </Suspense>
     );
@@ -26,37 +38,30 @@ function ProjectHMSContent() {
     const [project, setProject] = useState<Project | undefined>(undefined);
     const [documents, setDocuments] = useState<ProjectDocument[]>([]);
     const [loading, setLoading] = useState(true);
-    const [activeCategory, setActiveCategory] = useState<string | null>(null);
+    const [activeCategory, setActiveCategory] = useState<ProjectDocument["category"] | null>(null);
     const [showUpload, setShowUpload] = useState(false);
     const [qrToken, setQrToken] = useState<string | null>(null);
     const [showQr, setShowQr] = useState(false);
 
-    // Categories
-    const categories = [
-        { id: "SHA", label: "SHA-plan", icon: Shield, color: "#ef4444" },
-        { id: "SJA", label: "SJA", icon: FileText, color: "#f97316" },
-        { id: "Stoffkartotek", label: "Stoffkartotek", icon: Folder, color: "#3b82f6" },
-        { id: "Brukermanualer", label: "Brukermanualer", icon: Book, color: "#10b981" },
-        { id: "Samsvarserklæringer", label: "Samsvarserklæringer", icon: FileCheck, color: "#8b5cf6" },
-    ];
-
     useEffect(() => {
-        if (projectId) {
-            Promise.all([
-                getProjects().then(p => p.find(x => x.id === projectId)),
-                import("@/lib/db").then(mod => mod.getProjectDocuments(projectId))
-            ]).then(([foundProject, docs]) => {
-                setProject(foundProject);
-                setDocuments(docs);
-                setLoading(false);
-            });
+        if (!projectId) {
+            setLoading(false);
+            return;
         }
+
+        Promise.all([
+            getProjects().then((projects) => projects.find((projectItem) => projectItem.id === projectId)),
+            import("@/lib/db").then((mod) => mod.getProjectDocuments(projectId)),
+        ]).then(([foundProject, docs]) => {
+            setProject(foundProject);
+            setDocuments(docs);
+            setLoading(false);
+        });
     }, [projectId]);
 
     const handleShowQr = async () => {
         if (!project) return;
         try {
-            // Lazy load createShareToken
             const { createShareToken } = await import("@/lib/data");
             const token = await createShareToken(project.id);
             setQrToken(token);
@@ -70,11 +75,8 @@ function ProjectHMSContent() {
     const generatePDF = () => {
         if (!project) return;
         const doc = new jsPDF();
-
-        // Header
         doc.setFontSize(22);
         doc.text("HMS Dokumentasjonsoversikt", 20, 20);
-
         doc.setFontSize(16);
         doc.text(project.name, 20, 30);
         doc.setFontSize(12);
@@ -84,17 +86,14 @@ function ProjectHMSContent() {
         doc.setTextColor(0);
 
         let y = 60;
-
-        categories.forEach(cat => {
-            const catDocs = documents.filter(d => d.category === cat.id);
-
-            // Category Header
+        categories.forEach((category) => {
+            const categoryDocs = documents.filter((projectDoc) => projectDoc.category === category.id);
             doc.setFontSize(14);
             doc.setFont("helvetica", "bold");
-            doc.text(cat.label, 20, y);
+            doc.text(category.label, 20, y);
             y += 8;
 
-            if (catDocs.length === 0) {
+            if (categoryDocs.length === 0) {
                 doc.setFont("helvetica", "italic");
                 doc.setFontSize(10);
                 doc.text("- Ingen dokumenter -", 25, y);
@@ -102,14 +101,13 @@ function ProjectHMSContent() {
             } else {
                 doc.setFont("helvetica", "normal");
                 doc.setFontSize(10);
-                catDocs.forEach(d => {
-                    doc.text(`• ${d.title} (${new Date(d.uploadedAt).toLocaleDateString()})`, 25, y);
+                categoryDocs.forEach((projectDoc) => {
+                    doc.text(`- ${projectDoc.title} (${new Date(projectDoc.uploadedAt).toLocaleDateString()})`, 25, y);
                     y += 6;
                 });
                 y += 4;
             }
 
-            // Page break check
             if (y > 270) {
                 doc.addPage();
                 y = 20;
@@ -121,46 +119,37 @@ function ProjectHMSContent() {
 
     const handleDownloadAllZip = async () => {
         if (!project || documents.length === 0) return;
-        const confirm = window.confirm(`Vil du laste ned ${documents.length} dokumenter som ZIP? Dette kan ta litt tid.`);
-        if (!confirm) return;
+        const shouldDownload = window.confirm(`Vil du laste ned ${documents.length} dokumenter som ZIP?`);
+        if (!shouldDownload) return;
 
         try {
-            // Lazy load libraries
             const JSZip = (await import("jszip")).default;
             const { saveAs } = await import("file-saver");
             const { getProjectDocumentContent } = await import("@/lib/db");
-
             const zip = new JSZip();
             const folder = zip.folder("HMS-Dokumenter");
 
-            // Process sequentially to avoid memory spikes
-            let count = 0;
-            for (const doc of documents) {
-                const content = await getProjectDocumentContent(doc.id);
-                if (content) {
-                    // content is "data:application/pdf;base64,....."
-                    // We need to strip the prefix to get pure base64 for JSZip
-                    const base64Data = content.split(',')[1];
-                    if (base64Data) {
-                        // Try to detect extension from mime type
-                        let extension = "pdf";
-                        if (content.includes("image/jpeg")) extension = "jpg";
-                        if (content.includes("image/png")) extension = "png";
+            let fileCount = 0;
+            for (const projectDoc of documents) {
+                const content = await getProjectDocumentContent(projectDoc.id);
+                if (!content) continue;
+                const base64Data = content.split(",")[1];
+                if (!base64Data) continue;
 
-                        folder?.file(`${doc.title}.${extension}`, base64Data, { base64: true });
-                        count++;
-                    }
-                }
+                let extension = "pdf";
+                if (content.includes("image/jpeg")) extension = "jpg";
+                if (content.includes("image/png")) extension = "png";
+                folder?.file(`${projectDoc.title}.${extension}`, base64Data, { base64: true });
+                fileCount++;
             }
 
-            if (count === 0) {
-                alert("Fant ingen filer å laste ned.");
+            if (fileCount === 0) {
+                alert(`Fant ingen filer \u00e5 laste ned.`);
                 return;
             }
 
-            const content = await zip.generateAsync({ type: "blob" });
-            saveAs(content, `HMS-Dokumenter-${project.name}.zip`);
-
+            const blob = await zip.generateAsync({ type: "blob" });
+            saveAs(blob, `HMS-Dokumenter-${project.name}.zip`);
         } catch (error) {
             console.error("ZIP export failed", error);
             alert("Kunne ikke generere ZIP-fil.");
@@ -170,111 +159,79 @@ function ProjectHMSContent() {
     if (loading) return <div className="container" style={{ paddingTop: "2rem" }}>Laster HMS-dokumenter...</div>;
     if (!project) return <div className="container" style={{ paddingTop: "2rem" }}>Prosjekt ikke funnet</div>;
 
-    const filteredDocs = activeCategory ? documents.filter(d => d.category === activeCategory) : [];
+    const filteredDocs = activeCategory ? documents.filter((projectDoc) => projectDoc.category === activeCategory) : [];
+    const shareBase = `${window.location.origin}${window.location.pathname.includes("/bk-bygg-app") ? "/bk-bygg-app" : ""}/share/hms`;
+    const shareUrl = qrToken ? `${shareBase}?token=${qrToken}` : "";
 
     return (
-        <main className="container" style={{ paddingTop: "2rem", paddingBottom: "6rem" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "2rem" }}>
+        <main className="container page-shell">
+            <div className="flex-between" style={{ marginBottom: "2rem", alignItems: "flex-start", flexWrap: "wrap", gap: "1rem" }}>
                 <div>
-                    <Link href={`/projects/details?id=${project.id}`} style={{ display: "inline-flex", alignItems: "center", gap: "0.5rem", color: "var(--muted-foreground)", marginBottom: "0.5rem" }}>
+                    <Link href={`/projects/details?id=${project.id}`} className="back-link" style={{ marginBottom: "0.5rem" }}>
                         <ArrowLeft size={16} /> Tilbake til prosjekt
                     </Link>
                     <h1 style={{ margin: 0, fontSize: "1.75rem" }}>HMS-dokumentasjon</h1>
                     <p style={{ margin: 0, color: "var(--muted-foreground)" }}>{project.name} - {project.address}</p>
                 </div>
                 <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", justifyContent: "flex-end" }}>
-                    <button
-                        onClick={handleShowQr}
-                        className="btn btn-outline"
-                        title="Vis QR-kode"
-                    >
+                    <button onClick={handleShowQr} className="btn btn-outline" title="Vis QR-kode">
                         <QrCode size={20} />
                     </button>
-                    <button
-                        onClick={generatePDF}
-                        className="btn btn-outline"
-                        title="Last ned oversikt (PDF)"
-                    >
+                    <button onClick={generatePDF} className="btn btn-outline" title="Last ned oversikt (PDF)">
                         <FileText size={20} />
                     </button>
-                    <button
-                        onClick={handleDownloadAllZip}
-                        className="btn btn-outline"
-                        title="Last ned alle (ZIP)"
-                        disabled={documents.length === 0}
-                    >
+                    <button onClick={handleDownloadAllZip} className="btn btn-outline" title="Last ned alle (ZIP)" disabled={documents.length === 0}>
                         <Download size={20} />
                     </button>
                 </div>
             </div>
 
-            {/* Category Grid */}
             {!activeCategory ? (
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))", gap: "1rem" }}>
-                    {categories.map(cat => {
-                        const Icon = cat.icon;
-                        const count = documents.filter(d => d.category === cat.id).length;
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(170px, 1fr))", gap: "1rem" }}>
+                    {categories.map((category) => {
+                        const Icon = category.icon;
+                        const count = documents.filter((projectDoc) => projectDoc.category === category.id).length;
                         return (
-                            <div
-                                key={cat.id}
+                            <button
+                                key={category.id}
                                 className="card hover-effect"
-                                onClick={() => setActiveCategory(cat.id)}
-                                style={{
-                                    cursor: "pointer",
-                                    display: "flex",
-                                    flexDirection: "column",
-                                    alignItems: "center",
-                                    textAlign: "center",
-                                    gap: "0.5rem",
-                                    padding: "1.5rem"
-                                }}
+                                onClick={() => setActiveCategory(category.id)}
+                                style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "0.6rem", textAlign: "center", cursor: "pointer" }}
                             >
-                                <div style={{
-                                    padding: "1rem",
-                                    backgroundColor: `${cat.color}20`,
-                                    borderRadius: "50%",
-                                    color: cat.color
-                                }}>
+                                <div style={{ padding: "0.9rem", borderRadius: "999px", backgroundColor: `${category.color}20`, color: category.color }}>
                                     <Icon size={28} />
                                 </div>
-                                <h3 style={{ margin: 0, fontSize: "1rem" }}>{cat.label}</h3>
+                                <h3 style={{ margin: 0, fontSize: "1rem" }}>{category.label}</h3>
                                 <span style={{ fontSize: "0.8rem", color: "var(--muted-foreground)" }}>{count} dokumenter</span>
-                            </div>
+                            </button>
                         );
                     })}
                 </div>
             ) : (
                 <div>
-                    <button
-                        onClick={() => setActiveCategory(null)}
-                        style={{ background: "none", border: "none", color: "var(--primary)", cursor: "pointer", marginBottom: "1rem", display: "flex", alignItems: "center", gap: "0.5rem" }}
-                    >
+                    <button onClick={() => setActiveCategory(null)} className="btn btn-ghost" style={{ marginBottom: "1rem", color: "var(--muted-foreground)" }}>
                         <ArrowLeft size={16} /> Tilbake til oversikt
                     </button>
 
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
-                        <h2 style={{ margin: 0 }}>{categories.find(c => c.id === activeCategory)?.label}</h2>
-                        <button
-                            className="btn btn-primary"
-                            style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}
-                            onClick={() => setShowUpload(true)}
-                        >
+                    <div className="flex-between" style={{ marginBottom: "1rem", flexWrap: "wrap", gap: "0.75rem" }}>
+                        <h2 style={{ margin: 0 }}>{categories.find((category) => category.id === activeCategory)?.label}</h2>
+                        <button className="btn btn-primary" style={{ gap: "0.5rem" }} onClick={() => setShowUpload(true)}>
                             <Upload size={16} /> Last opp
                         </button>
                     </div>
 
                     {filteredDocs.length === 0 ? (
-                        <div className="card" style={{ textAlign: "center", padding: "3rem", color: "var(--muted-foreground)" }}>
+                        <div className="card" style={{ textAlign: "center", color: "var(--muted-foreground)" }}>
                             <p>Ingen dokumenter i denne kategorien enda.</p>
                         </div>
                     ) : (
                         <div style={{ display: "grid", gap: "1rem" }}>
-                            {filteredDocs.map(doc => (
+                            {filteredDocs.map((projectDoc) => (
                                 <ProjectDocumentItem
-                                    key={doc.id}
-                                    doc={doc}
-                                    onDelete={(id) => {
-                                        setDocuments(documents.filter(d => d.id !== id));
+                                    key={projectDoc.id}
+                                    doc={projectDoc}
+                                    onDelete={(deletedId) => {
+                                        setDocuments((prev) => prev.filter((item) => item.id !== deletedId));
                                     }}
                                 />
                             ))}
@@ -289,34 +246,29 @@ function ProjectHMSContent() {
                     category={activeCategory || undefined}
                     onClose={() => setShowUpload(false)}
                     onUploadComplete={(newDoc) => {
-                        setDocuments([newDoc, ...documents]);
+                        setDocuments((prev) => [newDoc, ...prev]);
                     }}
                 />
             )}
 
             {showQr && qrToken && (
-                <div style={{
-                    position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
-                    backgroundColor: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000
-                }}>
-                    <div className="card" style={{ padding: "2rem", textAlign: "center", position: "relative", maxWidth: "400px" }}>
-                        <button
-                            onClick={() => setShowQr(false)}
-                            style={{ position: "absolute", top: "1rem", right: "1rem", background: "none", border: "none", cursor: "pointer" }}
-                        >
-                            <X size={20} />
+                <div className="overlay">
+                    <div className="modal-card" style={{ position: "relative", textAlign: "center" }}>
+                        <button onClick={() => setShowQr(false)} className="btn-icon" style={{ position: "absolute", top: "0.75rem", right: "0.75rem" }}>
+                            <X size={18} />
                         </button>
                         <h2 style={{ marginBottom: "1rem" }}>Scan QR for HMS</h2>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
-                            src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(`${window.location.origin}${window.location.pathname.includes("/bk-bygg-app") ? "/bk-bygg-app" : ""}/share/hms?token=${qrToken}`)}`}
+                            src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(shareUrl)}`}
                             alt="QR Code"
                             style={{ marginBottom: "1rem" }}
                         />
                         <p style={{ fontSize: "0.9rem", color: "var(--muted-foreground)", marginBottom: "1rem" }}>
-                            Scan med kamera for å se HMS-dokumentasjon (Read-only).
+                            Scan med kamera for \u00e5 se HMS-dokumentasjon (read-only).
                         </p>
-                        <div style={{ background: "#f5f5f5", padding: "0.5rem", borderRadius: "4px", fontSize: "0.8rem", wordBreak: "break-all" }}>
-                            {window.location.origin}{window.location.pathname.includes("/bk-bygg-app") ? "/bk-bygg-app" : ""}/share/hms?token={qrToken}
+                        <div style={{ backgroundColor: "var(--secondary)", padding: "0.6rem", borderRadius: "var(--radius)", fontSize: "0.8rem", wordBreak: "break-all" }}>
+                            {shareUrl}
                         </div>
                     </div>
                 </div>
@@ -325,7 +277,7 @@ function ProjectHMSContent() {
     );
 }
 
-function ProjectDocumentItem({ doc, onDelete }: { doc: ProjectDocument, onDelete: (id: string) => void }) {
+function ProjectDocumentItem({ doc, onDelete }: { doc: ProjectDocument; onDelete: (id: string) => void }) {
     const [loading, setLoading] = useState(false);
     const [deleting, setDeleting] = useState(false);
 
@@ -338,24 +290,22 @@ function ProjectDocumentItem({ doc, onDelete }: { doc: ProjectDocument, onDelete
                 alert("Kunne ikke laste dokumentinnhold.");
                 return;
             }
-            // Open in new tab
             const win = window.open();
             if (win) {
-                win.document.write(`<iframe src="${content}" frameborder="0" style="border:0; top:0px; left:0px; bottom:0px; right:0px; width:100%; height:100%;" allowfullscreen></iframe>`);
+                win.document.write(`<iframe src="${content}" frameborder="0" style="border:0;width:100%;height:100%;" allowfullscreen></iframe>`);
             } else {
-                // Fallback if popup blocked
                 window.location.href = content;
             }
         } catch (error) {
             console.error(error);
-            alert("Feil ved åpning.");
+            alert(`Feil ved \u00e5pning.`);
         } finally {
             setLoading(false);
         }
     };
 
     const handleDelete = async () => {
-        if (!window.confirm("Er du sikker på at du vil slette dette dokumentet?")) return;
+        if (!window.confirm(`Er du sikker p\u00e5 at du vil slette dette dokumentet?`)) return;
         setDeleting(true);
         try {
             const { deleteProjectDocument } = await import("@/lib/data");
@@ -369,33 +319,20 @@ function ProjectDocumentItem({ doc, onDelete }: { doc: ProjectDocument, onDelete
     };
 
     return (
-        <div className="card" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <div className="card flex-between" style={{ gap: "1rem" }}>
             <div style={{ display: "flex", alignItems: "center", gap: "1rem", overflow: "hidden" }}>
                 <FileText size={24} color="var(--primary)" style={{ flexShrink: 0 }} />
                 <div style={{ minWidth: 0 }}>
                     <h4 style={{ margin: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{doc.title}</h4>
-                    <p style={{ margin: 0, fontSize: "0.8rem", color: "var(--muted-foreground)" }}>
-                        {new Date(doc.uploadedAt).toLocaleDateString()}
-                    </p>
+                    <p style={{ margin: 0, fontSize: "0.8rem", color: "var(--muted-foreground)" }}>{new Date(doc.uploadedAt).toLocaleDateString()}</p>
                 </div>
             </div>
             <div style={{ display: "flex", gap: "0.5rem" }}>
-                <button
-                    onClick={handleView}
-                    className="btn-icon"
-                    disabled={loading || deleting}
-                    title="Vis dokument"
-                >
-                    {loading ? <span className="loading loading-spinner loading-xs">...</span> : <Eye size={20} />}
+                <button onClick={handleView} className="btn-icon" disabled={loading || deleting} title="Vis dokument">
+                    {loading ? <Loader2 size={16} className="spin" /> : <Eye size={20} />}
                 </button>
-                <button
-                    onClick={handleDelete}
-                    className="btn-icon"
-                    disabled={loading || deleting}
-                    title="Slett dokument"
-                    style={{ color: "var(--destructive)" }}
-                >
-                    {deleting ? <span className="loading loading-spinner loading-xs">...</span> : <Trash2 size={20} />}
+                <button onClick={handleDelete} className="btn-icon" disabled={loading || deleting} title="Slett dokument" style={{ color: "var(--destructive)" }}>
+                    {deleting ? <Loader2 size={16} className="spin" /> : <Trash2 size={20} />}
                 </button>
             </div>
         </div>
